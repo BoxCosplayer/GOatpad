@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 )
 
 func main() {
@@ -19,5 +18,10 @@ func main() {
 
 	workingFile := loadFileDetails(file)
 
-	fmt.Println(workingFile.Content)
+	// type FileDetails struct {
+	// 	Content  string
+	// 	Metadata FileMetadata
+	// }
+
+	loadTUI(workingFile)
 }

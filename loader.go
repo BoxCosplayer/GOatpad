@@ -8,17 +8,19 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 )
 
 type FileMetadata struct {
-	path             string
-	name             string
-	size             int64
-	length           int
-	newlineType      string
-	encodingType     string
-	extensionType    string
-	modifiedDatetime string
+	path          string
+	name          string
+	size          string
+	length        int
+	newlineType   string
+	encodingType  string
+	extensionType string
+	modifiedDate  string
 }
 
 type FileDetails struct {
@@ -26,38 +28,9 @@ type FileDetails struct {
 	Metadata FileMetadata
 }
 
-func isValidUTF8(b []byte) bool {
-	for i := 0; i < len(b); {
-		if b[i] < 0x80 {
-			i++
-		} else if b[i] < 0xC0 {
-			return false
-		} else if b[i] < 0xE0 {
-			if i+1 >= len(b) {
-				return false
-			}
-			i += 2
-		} else if b[i] < 0xF0 {
-			if i+2 >= len(b) {
-				return false
-			}
-			i += 3
-		} else if b[i] < 0xF8 {
-			if i+3 >= len(b) {
-				return false
-			}
-			i += 4
-		} else {
-			return false
-		}
-	}
-	return true
-}
-
 func (m *FileMetadata) detectFileEncodingType(filePath string) {
-	// feat: if --force-utf8 is true, then do this as usual
-	// otherwise try to do some bom magic mayb
-	// rip chinese characters
+	// feat: if --force-utf is true, then do this as usual
+	// otherwise use bom to switch to other encoding types
 
 	if m.encodingType != "" {
 		return
@@ -88,13 +61,6 @@ func (m *FileMetadata) detectFileEncodingType(filePath string) {
 		chunk = buf[:n]
 	}
 
-	// if bytes contains binary values outside the ascii printable range, fail
-	// the acceptable range is 32-126, 9 (tab), 10 (lf), 13 (cr)
-	if !isValidUTF8(chunk) {
-		log.Printf("file encoding detection aborted: invalid UTF-8 sequence found")
-		return
-	}
-
 	for _, r := range string(chunk) {
 		if r < 32 && r != 9 && r != 10 && r != 13 {
 			log.Printf("file encoding detection aborted: non-printable character found: %v", r)
@@ -105,8 +71,17 @@ func (m *FileMetadata) detectFileEncodingType(filePath string) {
 	// 2. Check the BOM for encoding
 	//		Have this enabled in a config file in the future
 
-	// Default to utf-8
-	// m.encodingType = "utf-8"
+	// Read the bom from the first chunk
+	if bytes.HasPrefix(chunk, []byte{0xEF, 0xBB, 0xBF}) {
+		m.encodingType = "UTF-8"
+	} else if bytes.HasPrefix(chunk, []byte{0xFF, 0xFE}) {
+		m.encodingType = "UTF-16LE"
+	} else if bytes.HasPrefix(chunk, []byte{0xFE, 0xFF}) {
+		m.encodingType = "UTF-16BE"
+	} else {
+		m.encodingType = "UTF-8" // Default to UTF-8
+	}
+
 }
 
 func (m *FileMetadata) detectFileNewlineType(filePath string) {
@@ -208,16 +183,23 @@ func loadFileMetadata(filePath string) FileMetadata {
 		log.Fatalf("could not stat file: %v", err)
 		return metadata
 	}
-	//tab sizs if applicable xdd
+
+	// convert info.Size() from bytecount to KB if applicable
+	fileSize := ""
+	if info.Size() < 1024 {
+		fileSize = strconv.FormatInt(info.Size(), 10) + "B"
+	} else {
+		fileSize = strconv.FormatInt(info.Size()/1024, 10) + "KB"
+	}
 
 	metadata.path = filePath
 	metadata.name = info.Name()
-	metadata.size = info.Size()
+	metadata.size = fileSize
 	metadata.detectFileEncodingType(filePath)
 	metadata.detectFileNewlineType(filePath)
 	metadata.countFileLines(filePath)
 	metadata.extensionType = ext
-	metadata.modifiedDatetime = info.ModTime().String()
+	metadata.modifiedDate = strings.Split(info.ModTime().String(), " ")[0] // Remove Seconds, only date
 
 	return metadata
 }
