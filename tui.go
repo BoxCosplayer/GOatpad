@@ -58,7 +58,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.cursorPos[0][0] < lineLength-1 {
 					m.cursorPos[0][0]++
 				}
-
 			}
 		}
 	case "EDIT":
