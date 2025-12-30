@@ -7,6 +7,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	cursor "github.com/charmbracelet/bubbles/cursor"
+	textinput "github.com/charmbracelet/bubbles/textinput"
+	viewport "github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -49,14 +52,24 @@ type model struct {
 	cursorTrueCol int
 	currentFile   FileDetails
 	mode          string
+	cursorInput   textinput.Model
+	viewPort      viewport.Model
+	viewportReady bool
 }
 
 func initialModel(workingFile FileDetails) model {
+	input := textinput.New()
+	input.Prompt = ""
+	input.Placeholder = ""
+	input.Focus()
+	input.Cursor.SetMode(cursor.CursorStatic)
+
 	return model{
 		cursorPos:     [][]int{{0, 0}},
 		cursorTrueCol: 0,
 		currentFile:   workingFile,
 		mode:          "VIEW",
+		cursorInput:   input,
 	}
 }
 
@@ -184,22 +197,24 @@ func (m model) View() string {
 		for lineIdx, cols := range cursorMap {
 			sort.Ints(cols)
 			line := lines[lineIdx]
-			var b strings.Builder
-			last := 0
 
-			for _, col := range cols {
+			if len(cols) == 1 {
+				col := cols[0]
+				if col < 0 {
+					col = 0
+				}
 				if col > len(line) {
 					col = len(line)
 				}
-				b.WriteString(line[last:col])
-				b.WriteByte('|')
-				last = col
+
+				input := m.cursorInput
+				input.SetValue(line)
+				input.SetCursor(runeColAtByteOffset(line, col))
+
+				lines[lineIdx] = input.View()
+				continue
 			}
-
-			b.WriteString(line[last:])
-			lines[lineIdx] = b.String()
 		}
-
 		content = strings.Join(lines, "\n")
 	}
 
