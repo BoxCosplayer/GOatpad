@@ -9,8 +9,10 @@ import (
 
 	cursor "github.com/charmbracelet/bubbles/cursor"
 	textinput "github.com/charmbracelet/bubbles/textinput"
-	viewport "github.com/charmbracelet/bubbles/viewport"
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
+
+	humanize "github.com/dustin/go-humanize"
 )
 
 // runeCol -> byte offset
@@ -53,16 +55,24 @@ type model struct {
 	currentFile   FileDetails
 	mode          string
 	cursorInput   textinput.Model
-	viewPort      viewport.Model
-	viewportReady bool
+
+	viewport viewport.Model
 }
 
 func initialModel(workingFile FileDetails) model {
 	input := textinput.New()
 	input.Prompt = ""
 	input.Placeholder = ""
+
+	// init Cursor
+
 	input.Focus()
 	input.Cursor.SetMode(cursor.CursorStatic)
+
+	// init Viewport
+
+	vp := viewport.New(0, 0)
+	vp.YPosition = 0
 
 	return model{
 		cursorPos:     [][]int{{0, 0}},
@@ -70,7 +80,17 @@ func initialModel(workingFile FileDetails) model {
 		currentFile:   workingFile,
 		mode:          "VIEW",
 		cursorInput:   input,
+		viewport:      vp,
 	}
+}
+
+func (m *model) setSize(w int, h int) {
+	m.viewport.Width = w
+	m.viewport.Height = h - 1
+}
+
+func (m *model) setContent(s string) {
+	m.viewport.SetContent(s)
 }
 
 func (m model) Init() tea.Cmd {
@@ -81,6 +101,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch m.mode {
 	case "VIEW":
 		switch msg := msg.(type) {
+		// Window size is received when starting up and on every resize
+		case tea.WindowSizeMsg:
+			m.setSize(msg.Width, msg.Height)
+			m.setContent("")
+			return m, nil
 		case tea.KeyMsg:
 			// Keypress confirmed
 			switch msg.String() {
@@ -168,6 +193,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
+
 	content := strings.ReplaceAll(m.currentFile.Content, "\r", "")
 
 	// render cursor, based on m.cursorPos
@@ -220,11 +246,27 @@ func (m model) View() string {
 
 	metadata := m.currentFile.Metadata
 
-	footer := fmt.Sprintf("\n -- MODE: %s -- | Ln %d Col %d | %s | %v lines | %s | %s | %s | %s | %s |",
-		m.mode, m.cursorPos[0][1], m.cursorTrueCol, metadata.name, metadata.length, metadata.size,
-		metadata.encodingType, metadata.newlineType, metadata.extensionType, metadata.modifiedDate)
+	footer := fmt.Sprintf(
+		"\n -- MODE: %s -- | Ln %d Col %d | %s | %v lines | %s | %s | %s | %s | %s |",
+		m.mode,
+		m.cursorPos[0][1],
+		m.cursorTrueCol,
+		metadata.name,
+		metadata.length,
+		humanize.Bytes(uint64(metadata.size)),
+		metadata.encodingType,
+		metadata.newlineType,
+		metadata.extensionType,
+		metadata.modifiedDate,
+	)
 
-	return fmt.Sprintf("%s %s", content, footer)
+	var b strings.Builder
+	fmt.Fprint(&b, content)
+	content = b.String()
+
+	m.setContent(content)
+
+	return m.viewport.View() + footer
 }
 
 func loadTUI(workingFile FileDetails) {

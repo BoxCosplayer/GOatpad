@@ -8,14 +8,13 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 )
 
 type FileMetadata struct {
 	path          string
 	name          string
-	size          string
+	size          int64
 	length        int
 	newlineType   string
 	encodingType  string
@@ -184,17 +183,9 @@ func loadFileMetadata(filePath string) FileMetadata {
 		return metadata
 	}
 
-	// convert info.Size() from bytecount to KB if applicable
-	fileSize := ""
-	if info.Size() < 1024 {
-		fileSize = strconv.FormatInt(info.Size(), 10) + "B"
-	} else {
-		fileSize = strconv.FormatInt(info.Size()/1024, 10) + "KB"
-	}
-
 	metadata.path = filePath
 	metadata.name = info.Name()
-	metadata.size = fileSize
+	metadata.size = info.Size() // Bytes
 	metadata.detectFileEncodingType(filePath)
 	metadata.detectFileNewlineType(filePath)
 	metadata.countFileLines(filePath)
