@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/mattn/go-runewidth"
 	termbox "github.com/nsf/termbox-go"
@@ -14,16 +16,29 @@ const (
 )
 
 var (
+	mode int
+
 	ROWS int
 	COLS int
+
+	cursorRow int
+	cursorCol int
 
 	offsetX int
 	offsetY int
 
-	// Establish an empty text buffer to write to
-	textBuffer = [][]rune{{}}
+	cursorY int
+	cursorX int
 
-	sourceFile string
+	// Establish an empty buffers
+	textBuffer = [][]rune{{}}
+	undoBuffer = [][]rune{}
+	copyBuffer = [][]rune{}
+
+	file          string
+	filename      string
+	fileExtension string
+	modified      bool
 )
 
 func read_file(filename string) {
@@ -61,17 +76,13 @@ func read_file(filename string) {
 }
 
 func display_text_buffer() {
-	var (
-		row       int
-		cursorCol int
-	)
 
 	// For every Character...
-	for row = 0; row < ROWS; row++ {
-		textBufferRow := row + offsetY
+	for cursorRow = 0; cursorRow < ROWS; cursorRow++ {
+		textBufferRow := cursorRow + offsetY
 
 		// `writingCol` determines where to write to in the terminal
-		// `textBuffercol` determines which character to pull from the buffer
+		// `textBuffercol` determines which character to read (& pull from the buffer)
 		// `cursorCol` determines which character we are going to write
 		writingCol := 0
 		for cursorCol = 0; cursorCol < COLS; cursorCol++ {
@@ -83,21 +94,74 @@ func display_text_buffer() {
 
 				// ...Print character to terminal
 				if textBuffer[textBufferRow][textBufferCol] != '\t' {
-					termbox.SetChar(writingCol, row, textBuffer[textBufferRow][textBufferCol])
+					termbox.SetChar(writingCol, cursorRow, textBuffer[textBufferRow][textBufferCol])
 					writingCol++
 				} else {
 					for i := 0; i < tabwidth; i++ {
-						termbox.SetCell(writingCol, row, ' ', termbox.ColorDefault, termbox.ColorDefault)
+						termbox.SetCell(writingCol, cursorRow, ' ', termbox.ColorDefault, termbox.ColorDefault)
 						writingCol++
 					}
 				}
-			} else if row+offsetY > len(textBuffer)-1 {
+			} else if cursorRow+offsetY > len(textBuffer)-1 {
 				// Indicate EoF
-				termbox.SetCell(0, row, rune('*'), termbox.ColorBlue, termbox.ColorDefault)
+				termbox.SetCell(0, cursorRow, rune('*'), termbox.ColorBlue, termbox.ColorDefault)
 			}
 		}
-		termbox.SetChar(cursorCol, row, rune('\n'))
+		termbox.SetChar(cursorCol, cursorRow, rune('\n'))
 	}
+}
+
+func display_status_bar() {
+	var (
+		modeStatus   string
+		fileStatus   string
+		cursorStatus string
+		copyStatus   string
+		undoStatus   string
+
+		emptySpace int
+	)
+
+	if mode == 1 {
+		modeStatus = " [EDIT] "
+	} else {
+		modeStatus = " [VIEW] "
+	}
+
+	if modified {
+		fileStatus += " modified"
+	} else {
+		fileStatus += " saved"
+	}
+
+	if len(copyBuffer) > 0 {
+		copyStatus = " [COPY]"
+	}
+	if len(undoBuffer) > 0 {
+		undoStatus = " [UNDO]"
+	}
+
+	cursorStatus = " Line " + strconv.Itoa(cursorRow+1) + " Col " + strconv.Itoa(cursorCol+1) + " "
+
+	fileStatus = fileExtension + " - " + strconv.Itoa(len(textBuffer)) + " lines" + fileStatus
+
+	emptySpace = COLS - (len(modeStatus) + len(copyStatus) + len(undoStatus) + len(cursorStatus))
+	filenameLength := len(filename)
+	filenameSpace := emptySpace - len(fileStatus) - tabwidth - 2
+
+	if filenameLength > filenameSpace {
+		filenameLength = filenameSpace
+		fileStatus = filename[:filenameLength] + ".." + fileStatus
+	} else {
+		fileStatus = filename[:filenameLength] + fileStatus
+	}
+
+	emptySpace = COLS - (len(modeStatus) + len(fileStatus) + len(copyStatus) + len(undoStatus) + len(cursorStatus))
+	spaces := strings.Repeat(" ", emptySpace)
+
+	message := modeStatus + fileStatus + copyStatus + undoStatus + spaces + cursorStatus
+	print_message(0, ROWS, termbox.ColorBlack, termbox.ColorWhite, message)
+
 }
 
 func print_message(col int, row int, fg termbox.Attribute, bg termbox.Attribute, message string) {
@@ -116,10 +180,18 @@ func run_editor() {
 
 	// Check for args
 	if len(os.Args) > 1 {
-		sourceFile = os.Args[1]
-		read_file(sourceFile)
+		file = os.Args[1]
+		lastDotIndex := strings.LastIndex(file, ".")
+		if lastDotIndex != -1 {
+			fileExtension = file[lastDotIndex:]
+			filename = file[:lastDotIndex]
+		} else {
+			fileExtension = ""
+			filename = file
+		}
+		read_file(file)
 	} else {
-		sourceFile = "out.txt"
+		filename = "out.txt"
 		textBuffer = append(textBuffer, []rune{})
 	}
 
@@ -137,6 +209,7 @@ func run_editor() {
 		// Empty the terminal, and show the template text
 		termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
 		display_text_buffer()
+		display_status_bar()
 		termbox.Flush()
 
 		// Wait for an event

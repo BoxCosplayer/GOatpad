@@ -1,4 +1,4 @@
-module goatpad2
+module goatpad
 
 go 1.25.5
 
