@@ -21,14 +21,11 @@ var (
 	ROWS int
 	COLS int
 
-	cursorRow int
-	cursorCol int
+	currentCol int
+	currentRow int
 
-	offsetX int
-	offsetY int
-
-	cursorY int
-	cursorX int
+	offsetCol int
+	offsetRow int
 
 	// Establish an empty buffers
 	textBuffer = [][]rune{{}}
@@ -75,18 +72,37 @@ func read_file(filename string) {
 	}
 }
 
+func scroll_text_buffer() {
+	if currentRow < offsetRow {
+		offsetRow = currentRow
+	}
+	if currentCol < offsetCol {
+		offsetCol = currentCol
+	}
+	if currentRow >= offsetRow+ROWS {
+		offsetRow = currentRow - ROWS + 1
+	}
+	if currentCol >= offsetCol+COLS {
+		offsetCol = currentCol - COLS + 1
+	}
+}
+
 func display_text_buffer() {
+	var (
+		cursorRow int
+		cursorCol int
+	)
 
 	// For every Character...
 	for cursorRow = 0; cursorRow < ROWS; cursorRow++ {
-		textBufferRow := cursorRow + offsetY
+		textBufferRow := cursorRow + offsetRow
 
 		// `writingCol` determines where to write to in the terminal
 		// `textBuffercol` determines which character to read (& pull from the buffer)
 		// `cursorCol` determines which character we are going to write
 		writingCol := 0
 		for cursorCol = 0; cursorCol < COLS; cursorCol++ {
-			textBufferCol := cursorCol + offsetX
+			textBufferCol := cursorCol + offsetCol
 
 			// Bound checking
 			if textBufferRow >= 0 && textBufferRow < len(textBuffer) &&
@@ -102,7 +118,7 @@ func display_text_buffer() {
 						writingCol++
 					}
 				}
-			} else if cursorRow+offsetY > len(textBuffer)-1 {
+			} else if cursorRow+offsetRow > len(textBuffer)-1 {
 				// Indicate EoF
 				termbox.SetCell(0, cursorRow, rune('*'), termbox.ColorBlue, termbox.ColorDefault)
 			}
@@ -141,7 +157,7 @@ func display_status_bar() {
 		undoStatus = " [UNDO]"
 	}
 
-	cursorStatus = " Line " + strconv.Itoa(cursorRow+1) + " Col " + strconv.Itoa(cursorCol+1) + " "
+	cursorStatus = " Line " + strconv.Itoa(currentRow+1) + " Col " + strconv.Itoa(currentCol+2) + " "
 
 	fileStatus = fileExtension + " - " + strconv.Itoa(len(textBuffer)) + " lines" + fileStatus
 
@@ -156,7 +172,7 @@ func display_status_bar() {
 		fileStatus = filename[:filenameLength] + fileStatus
 	}
 
-	emptySpace = COLS - (len(modeStatus) + len(fileStatus) + len(copyStatus) + len(undoStatus) + len(cursorStatus))
+	emptySpace = COLS - (len(modeStatus) + len(fileStatus) + len(copyStatus) + len(undoStatus) + len(cursorStatus)) - 4
 	spaces := strings.Repeat(" ", emptySpace)
 
 	message := modeStatus + fileStatus + copyStatus + undoStatus + spaces + cursorStatus
@@ -168,6 +184,40 @@ func print_message(col int, row int, fg termbox.Attribute, bg termbox.Attribute,
 	for _, ch := range message {
 		termbox.SetCell(col, row, ch, fg, bg)
 		col += runewidth.RuneWidth(ch)
+	}
+}
+
+func get_key() termbox.Event {
+	var keyEvent termbox.Event
+
+	switch event := termbox.PollEvent(); event.Type {
+	case termbox.EventKey:
+		keyEvent = event
+	case termbox.EventError:
+		panic(event.Err)
+	}
+	return keyEvent
+}
+
+func process_key() {
+	key_event := get_key()
+	if key_event.Key == termbox.KeyEsc {
+		termbox.Close()
+		os.Exit(0)
+	} else if key_event.Ch != 0 {
+		// handle chars
+	} else {
+		switch key_event.Key {
+		case termbox.KeyArrowUp:
+			if currentRow != 0 {
+				currentRow--
+			}
+
+		case termbox.KeyArrowDown:
+			if currentRow < len(textBuffer)-1 {
+				currentRow++
+			}
+		}
 	}
 }
 
@@ -208,18 +258,16 @@ func run_editor() {
 
 		// Empty the terminal, and show the template text
 		termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
+		scroll_text_buffer()
 		display_text_buffer()
 		display_status_bar()
+
+		termbox.SetCursor(currentCol-offsetCol, currentRow-offsetRow)
+
 		termbox.Flush()
 
 		// Wait for an event
-		event := termbox.PollEvent()
-
-		// If 'Esc' key was pressed, close the application
-		if event.Type == termbox.EventKey && event.Key == termbox.KeyEsc {
-			termbox.Close()
-			break
-		}
+		process_key()
 	}
 }
 
