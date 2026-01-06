@@ -28,7 +28,7 @@ func process_key() {
 			// ---------- Cursor movement ----------
 
 			// Cursor Left
-			case 'h':
+			case CURSOR_LEFT:
 				if currentCol != 0 {
 					currentCol--
 				} else if currentRow > 0 {
@@ -37,27 +37,25 @@ func process_key() {
 				}
 
 			// Cursor down
-			case 'j':
+			case CURSOR_DOWN:
 				if currentRow < len(textBuffer)-1 {
 					currentRow++
 				}
 
 			// Cursor Up
-			case 'k':
+			case CURSOR_UP:
 				if currentRow != 0 {
 					currentRow--
 				}
 
 			// Cursor Right
-			case 'l':
+			case CURSOR_RIGHT:
 				if currentCol < len(textBuffer[currentRow]) {
 					currentCol++
 				} else if currentRow < len(textBuffer)-1 {
 					currentRow++
 					currentCol = 0
 				}
-
-				// ---------- New Section ----------
 			}
 
 			// Bound Cursor within buffer
