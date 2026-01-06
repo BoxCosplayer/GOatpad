@@ -64,7 +64,7 @@ func process_key() {
 			}
 
 		} else {
-
+			// Special Character Pressed
 			switch key_event.Key {
 			case termbox.KeyArrowUp:
 				if currentRow != 0 {
@@ -91,6 +91,11 @@ func process_key() {
 					currentRow++
 					currentCol = 0
 				}
+			}
+
+			// Bound Cursor within buffer
+			if currentCol > len(textBuffer[currentRow]) {
+				currentCol = len(textBuffer[currentRow])
 			}
 		}
 
