@@ -107,16 +107,13 @@ func display_text_buffer() {
 			// Bound checking
 			if textBufferRow >= 0 && textBufferRow < len(textBuffer) &&
 				textBufferCol < len(textBuffer[textBufferRow]) {
-
 				// ...Print character to terminal
 				if textBuffer[textBufferRow][textBufferCol] != '\t' {
 					termbox.SetChar(writingCol, cursorRow, textBuffer[textBufferRow][textBufferCol])
 					writingCol++
 				} else {
-					for i := 0; i < tabwidth; i++ {
-						termbox.SetCell(writingCol, cursorRow, ' ', termbox.ColorDefault, termbox.ColorDefault)
-						writingCol++
-					}
+					termbox.SetCell(writingCol, cursorRow, ' ', termbox.ColorDefault, termbox.ColorDefault)
+					writingCol++
 				}
 			} else if cursorRow+offsetRow > len(textBuffer)-1 {
 				// Indicate EoF
@@ -197,28 +194,6 @@ func get_key() termbox.Event {
 		panic(event.Err)
 	}
 	return keyEvent
-}
-
-func process_key() {
-	key_event := get_key()
-	if key_event.Key == termbox.KeyEsc {
-		termbox.Close()
-		os.Exit(0)
-	} else if key_event.Ch != 0 {
-		// handle chars
-	} else {
-		switch key_event.Key {
-		case termbox.KeyArrowUp:
-			if currentRow != 0 {
-				currentRow--
-			}
-
-		case termbox.KeyArrowDown:
-			if currentRow < len(textBuffer)-1 {
-				currentRow++
-			}
-		}
-	}
 }
 
 func run_editor() {
