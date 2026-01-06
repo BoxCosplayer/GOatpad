@@ -27,7 +27,6 @@ var (
 	offsetCol int
 	offsetRow int
 
-	// Establish an empty buffers
 	textBuffer = [][]rune{{}}
 	undoBuffer = [][]rune{}
 	copyBuffer = [][]rune{}

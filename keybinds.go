@@ -11,19 +11,18 @@ import (
 // textBuffer = text buffer
 
 func process_key() {
-	key_event := get_key()
-	if key_event.Key == termbox.KeyEsc {
-		termbox.Close()
-		os.Exit(0)
+	keyEvent := get_key()
+	if keyEvent.Key == termbox.KeyEsc {
+		toggle_mode()
 	}
 
 	// First, check the mode.
 	switch mode {
 	// case [VIEW] mode
 	case 0:
-		if key_event.Ch != 0 {
+		if keyEvent.Ch != 0 {
 			// Printable Character Pressed
-			switch key_event.Ch {
+			switch keyEvent.Ch {
 
 			// ---------- Cursor movement ----------
 
@@ -56,6 +55,11 @@ func process_key() {
 					currentRow++
 					currentCol = 0
 				}
+
+			case QUIT:
+				termbox.Close()
+				os.Exit(0)
+
 			}
 
 			// Bound Cursor within buffer
@@ -65,7 +69,7 @@ func process_key() {
 
 		} else {
 			// Special Character Pressed
-			switch key_event.Key {
+			switch keyEvent.Key {
 			case termbox.KeyArrowUp:
 				if currentRow != 0 {
 					currentRow--
@@ -102,5 +106,53 @@ func process_key() {
 	// case [EDIT] mode
 	case 1:
 
+		if keyEvent.Ch != 0 {
+			insert_rune(keyEvent)
+		} else {
+			switch keyEvent.Key {
+
+			case termbox.KeySpace:
+				insert_rune(keyEvent)
+			case termbox.KeyTab:
+				for i := 0; i <= 4; i++ {
+					insert_rune(keyEvent)
+				}
+
+			}
+		}
+	}
+}
+
+func insert_rune(event termbox.Event) {
+	rowBuffer := make([]rune, len(textBuffer[currentRow])+1)
+
+	// Populate line buffer with currentRow contents
+	// from the start of row, to the cursor
+	copy(rowBuffer[:currentCol], textBuffer[currentRow][:currentCol])
+
+	currentRune := &rowBuffer[currentCol]
+
+	switch event.Key {
+	case termbox.KeySpace:
+		*currentRune = rune(' ')
+	case termbox.KeyTab:
+		*currentRune = rune('\t')
+	default:
+		*currentRune = rune(event.Ch)
+	}
+
+	// Finish populating line buffer with currentRow contents
+	// from the cursor to the end of the line
+	copy(rowBuffer[currentCol+1:], textBuffer[currentRow][currentCol:])
+
+	textBuffer[currentRow] = rowBuffer
+	currentCol++
+}
+
+func toggle_mode() {
+	if mode != 1 {
+		mode++
+	} else {
+		mode--
 	}
 }

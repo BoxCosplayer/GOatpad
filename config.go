@@ -1,5 +1,6 @@
 package main
 
+// View mode binds
 const (
 
 	// ---------- Cursor movement ----------
@@ -10,4 +11,5 @@ const (
 	CURSOR_RIGHT rune = 'l'
 	// alternatively use arrow keys
 
+	QUIT rune = 'q'
 )
