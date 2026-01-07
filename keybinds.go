@@ -125,6 +125,9 @@ func process_key() {
 			case termbox.KeyDelete:
 				delete_rune(keyEvent)
 
+			case termbox.KeyEnter:
+				insert_line()
+
 			}
 		}
 	}
@@ -219,6 +222,20 @@ func delete_rune(event termbox.Event) {
 
 		}
 	}
+
+	modified = true
+}
+
+func insert_line() {
+
+	newLine := make([]rune, len(textBuffer[currentRow])-currentCol)
+	copy(newLine, textBuffer[currentRow][currentCol:])
+
+	textBuffer[currentRow] = textBuffer[currentRow][:currentCol]
+	textBuffer = append(textBuffer[:currentRow+1], append([][]rune{newLine}, textBuffer[currentRow+1:]...)...)
+
+	currentRow++
+	currentCol = 0
 
 	modified = true
 }
