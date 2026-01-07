@@ -127,7 +127,6 @@ func process_key() {
 
 			}
 		}
-		modified = true
 	}
 }
 
@@ -164,6 +163,8 @@ func insert_rune(event termbox.Event) {
 
 	textBuffer[currentRow] = rowBuffer
 	currentCol++
+
+	modified = true
 }
 
 func delete_rune(event termbox.Event) {
@@ -218,4 +219,6 @@ func delete_rune(event termbox.Event) {
 
 		}
 	}
+
+	modified = true
 }
