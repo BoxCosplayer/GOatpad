@@ -153,7 +153,7 @@ func display_status_bar() {
 		undoStatus = " [UNDO]"
 	}
 
-	cursorStatus = " Line " + strconv.Itoa(currentRow+1) + " Col " + strconv.Itoa(currentCol+2) + " "
+	cursorStatus = " Line " + strconv.Itoa(currentRow+1) + " Col " + strconv.Itoa(currentCol+1) + " "
 
 	fileStatus = fileExtension + " - " + strconv.Itoa(len(textBuffer)) + " lines" + fileStatus
 
