@@ -16,13 +16,7 @@ func process_key() {
 	// Binds that happen regardless of mode
 	switch keyEvent.Key {
 
-	case INSERT_MODE_KEY, INSERT_MODE_KEY2:
-		switch_mode("Insert")
-
-	case VIEW_MODE_KEY, VIEW_MODE_KEY2:
-		switch_mode("View")
-
-	case TOGGLE_MODE_KEY, TOGGLE_MODE_KEY2:
+	case TOGGLE_MODE_KEY:
 		switch_mode("Toggle")
 
 	case termbox.KeyCtrlS:
