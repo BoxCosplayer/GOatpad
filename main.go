@@ -60,7 +60,13 @@ func read_file(filename string) {
 	for scanner.Scan() {
 		line := scanner.Text()
 		for _, ch := range line {
-			textBuffer[lineNumber] = append(textBuffer[lineNumber], ch)
+			if ch == '\t' {
+				for i := 0; i < TAB_WIDTH; i++ {
+					textBuffer[lineNumber] = append(textBuffer[lineNumber], ' ')
+				}
+			} else {
+				textBuffer[lineNumber] = append(textBuffer[lineNumber], ch)
+			}
 		}
 		textBuffer = append(textBuffer, []rune{})
 		lineNumber++
