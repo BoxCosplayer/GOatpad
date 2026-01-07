@@ -12,8 +12,15 @@ import (
 
 func process_key() {
 	keyEvent := get_key()
-	if keyEvent.Key == termbox.KeyEsc || keyEvent.Key == termbox.KeyInsert {
+
+	// Binds that happen regardless of mode
+	switch keyEvent.Key {
+
+	case termbox.KeyEsc, termbox.KeyInsert:
 		toggle_mode(keyEvent)
+
+	case termbox.KeyCtrlS:
+		write_file(filename, fileExtension)
 	}
 
 	// First, check the mode.

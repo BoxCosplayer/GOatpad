@@ -71,6 +71,33 @@ func read_file(filename string) {
 	}
 }
 
+func write_file(filename string, fileExtension string) {
+	file, err := os.Create(filename + fileExtension)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	defer file.Close()
+
+	writer := bufio.NewWriter(file)
+	for row, line := range textBuffer {
+		newLine := "\n"
+
+		if row == len(textBuffer)-1 {
+			newLine = ""
+		}
+
+		_, err = writer.WriteString(string(line) + newLine)
+		if err != nil {
+			fmt.Println("Error: ", err)
+		}
+
+		writer.Flush()
+		modified = false
+	}
+
+}
+
 func scroll_text_buffer() {
 	if currentRow < offsetRow {
 		offsetRow = currentRow
