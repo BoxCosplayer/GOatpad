@@ -12,8 +12,8 @@ import (
 
 func process_key() {
 	keyEvent := get_key()
-	if keyEvent.Key == termbox.KeyEsc {
-		toggle_mode()
+	if keyEvent.Key == termbox.KeyEsc || keyEvent.Key == termbox.KeyInsert {
+		toggle_mode(keyEvent)
 	}
 
 	// First, check the mode.
@@ -118,8 +118,25 @@ func process_key() {
 					insert_rune(keyEvent)
 				}
 
+			case termbox.KeyBackspace:
+				delete_rune(keyEvent)
+			case termbox.KeyBackspace2:
+				delete_rune(keyEvent)
+			case termbox.KeyDelete:
+				delete_rune(keyEvent)
+
 			}
 		}
+		modified = true
+	}
+}
+
+func toggle_mode(event termbox.Event) {
+	switch event.Key {
+	case termbox.KeyEsc:
+		mode = 0
+	case termbox.KeyInsert:
+		mode = 1
 	}
 }
 
@@ -149,10 +166,56 @@ func insert_rune(event termbox.Event) {
 	currentCol++
 }
 
-func toggle_mode() {
-	if mode != 1 {
-		mode++
-	} else {
-		mode--
+func delete_rune(event termbox.Event) {
+	switch event.Key {
+	case termbox.KeyBackspace, termbox.KeyBackspace2:
+		if currentCol > 0 {
+			currentCol--
+
+			deleteLine := make([]rune, len(textBuffer[currentRow])-1)
+			copy(deleteLine[:currentCol], textBuffer[currentRow][:currentCol])
+			copy(deleteLine[currentCol:], textBuffer[currentRow][currentCol+1:])
+			textBuffer[currentRow] = deleteLine
+
+		} else if currentRow > 0 {
+
+			wrapText := make([]rune, len(textBuffer[currentRow]))
+			copy(wrapText, textBuffer[currentRow][currentCol:])
+
+			prevLineLen := len(textBuffer[currentRow-1])
+			appendLine := make([]rune, len(textBuffer[currentRow-1])+len(wrapText))
+			copy(appendLine[:len(textBuffer[currentRow-1])], textBuffer[currentRow-1])
+			copy(appendLine[len(textBuffer[currentRow-1]):], wrapText)
+
+			textBuffer[currentRow-1] = appendLine
+			textBuffer = append(textBuffer[:currentRow], textBuffer[currentRow+1:]...)
+			currentRow--
+			currentCol = prevLineLen
+
+		}
+
+	case termbox.KeyDelete:
+		if currentCol < len(textBuffer[currentRow]) {
+
+			deleteLine := make([]rune, len(textBuffer[currentRow])-1)
+			copy(deleteLine[:currentCol], textBuffer[currentRow][:currentCol+1])
+			copy(deleteLine[currentCol:], textBuffer[currentRow][currentCol+1:])
+			textBuffer[currentRow] = deleteLine
+
+		} else if currentRow < len(textBuffer)-1 {
+
+			wrapText := textBuffer[currentRow+1]
+
+			currentLineLen := len(textBuffer[currentRow])
+			appendLine := make([]rune, len(textBuffer[currentRow])+len(wrapText))
+			copy(appendLine[:len(textBuffer[currentRow])], textBuffer[currentRow])
+			copy(appendLine[len(textBuffer[currentRow]):], wrapText)
+
+			textBuffer[currentRow] = appendLine
+			textBuffer = append(textBuffer[:currentRow+1], textBuffer[currentRow+2:]...)
+
+			currentCol = currentLineLen
+
+		}
 	}
 }
