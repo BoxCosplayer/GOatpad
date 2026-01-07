@@ -17,10 +17,5 @@ const (
 
 	TAB_WIDTH int = 4
 
-	INSERT_MODE_KEY  termbox.Key = termbox.KeyInsert
-	INSERT_MODE_KEY2 termbox.Key = 'i'
-	VIEW_MODE_KEY    termbox.Key = termbox.KeyCtrlTilde
-	VIEW_MODE_KEY2   termbox.Key = 'v'
-	TOGGLE_MODE_KEY  termbox.Key = termbox.KeyEsc
-	TOGGLE_MODE_KEY2 termbox.Key = 't'
+	TOGGLE_MODE_KEY termbox.Key = termbox.KeyEsc
 )
