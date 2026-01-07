@@ -12,7 +12,8 @@ import (
 )
 
 const (
-	tabwidth = 4
+	// View and Edit
+	MAX_MODES = 2
 )
 
 var (
@@ -72,6 +73,7 @@ func read_file(filename string) {
 }
 
 func write_file(filename string, fileExtension string) {
+	// Create or open the 'filename.extension'
 	file, err := os.Create(filename + fileExtension)
 	if err != nil {
 		fmt.Println(err)
@@ -79,6 +81,8 @@ func write_file(filename string, fileExtension string) {
 
 	defer file.Close()
 
+	// Write each line to the file manually
+	// by ensuring to add newlines
 	writer := bufio.NewWriter(file)
 	for row, line := range textBuffer {
 		newLine := "\n"
@@ -152,13 +156,11 @@ func display_text_buffer() {
 
 func display_status_bar() {
 	var (
-		modeStatus   string
-		fileStatus   string
-		cursorStatus string
-		copyStatus   string
-		undoStatus   string
-
-		emptySpace int
+		modeStatus   string // current mode
+		fileStatus   string // filename, total number of lines, modification status
+		cursorStatus string // location of cursor (line, column)
+		copyStatus   string // whether the copy buffer is active
+		undoStatus   string // whether the undo buffer is active
 	)
 
 	if mode == 1 {
@@ -184,9 +186,10 @@ func display_status_bar() {
 
 	fileStatus = fileExtension + " - " + strconv.Itoa(len(textBuffer)) + " lines" + fileStatus
 
-	emptySpace = COLS - (len(modeStatus) + len(copyStatus) + len(undoStatus) + len(cursorStatus))
+	// Logic to clamp filename to the leftover space
+	emptySpace := COLS - (len(modeStatus) + len(copyStatus) + len(undoStatus) + len(cursorStatus))
 	filenameLength := len(filename)
-	filenameSpace := emptySpace - len(fileStatus) - tabwidth - 2
+	filenameSpace := emptySpace - len(fileStatus) - TAB_WIDTH - 2
 
 	if filenameLength > filenameSpace {
 		filenameLength = filenameSpace
@@ -195,6 +198,7 @@ func display_status_bar() {
 		fileStatus = filename[:filenameLength] + fileStatus
 	}
 
+	// Determine amount of space to create between left side and right side of status bar
 	emptySpace = COLS - (len(modeStatus) + len(fileStatus) + len(copyStatus) + len(undoStatus) + len(cursorStatus)) - 4
 	spaces := strings.Repeat(" ", emptySpace)
 
@@ -204,6 +208,7 @@ func display_status_bar() {
 }
 
 func print_message(col int, row int, fg termbox.Attribute, bg termbox.Attribute, message string) {
+	// macro to loop a "SetCell" for any message
 	for _, ch := range message {
 		termbox.SetCell(col, row, ch, fg, bg)
 		col += runewidth.RuneWidth(ch)
@@ -211,6 +216,8 @@ func print_message(col int, row int, fg termbox.Attribute, bg termbox.Attribute,
 }
 
 func get_key() termbox.Event {
+	// Function to detect and grab keypresses,
+	// handled by process_key in keybinds.go
 	var keyEvent termbox.Event
 
 	switch event := termbox.PollEvent(); event.Type {
@@ -263,8 +270,8 @@ func run_editor() {
 		display_text_buffer()
 		display_status_bar()
 
+		// Draw Cursor, and syncronise terminal
 		termbox.SetCursor(currentCol-offsetCol, currentRow-offsetRow)
-
 		termbox.Flush()
 
 		// Wait for an event

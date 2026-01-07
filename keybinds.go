@@ -16,8 +16,14 @@ func process_key() {
 	// Binds that happen regardless of mode
 	switch keyEvent.Key {
 
-	case termbox.KeyEsc, termbox.KeyInsert:
-		toggle_mode(keyEvent)
+	case INSERT_MODE_KEY, INSERT_MODE_KEY2:
+		switch_mode("Insert")
+
+	case VIEW_MODE_KEY, VIEW_MODE_KEY2:
+		switch_mode("View")
+
+	case TOGGLE_MODE_KEY, TOGGLE_MODE_KEY2:
+		switch_mode("Toggle")
 
 	case termbox.KeyCtrlS:
 		write_file(filename, fileExtension)
@@ -63,7 +69,14 @@ func process_key() {
 					currentCol = 0
 				}
 
-			case QUIT:
+			// Exit program with saving
+			case QUIT_SAVE:
+				write_file(filename, fileExtension)
+				termbox.Close()
+				os.Exit(0)
+
+			// Exit program without saving
+			case QUIT_NOSAVE:
 				termbox.Close()
 				os.Exit(0)
 
@@ -77,16 +90,20 @@ func process_key() {
 		} else {
 			// Special Character Pressed
 			switch keyEvent.Key {
+
+			// cursor up
 			case termbox.KeyArrowUp:
 				if currentRow != 0 {
 					currentRow--
 				}
 
+			// cursor down
 			case termbox.KeyArrowDown:
 				if currentRow < len(textBuffer)-1 {
 					currentRow++
 				}
 
+			// cursor left
 			case termbox.KeyArrowLeft:
 				if currentCol != 0 {
 					currentCol--
@@ -95,6 +112,7 @@ func process_key() {
 					currentCol = len(textBuffer[currentRow])
 				}
 
+			// cursor right
 			case termbox.KeyArrowRight:
 				if currentCol < len(textBuffer[currentRow]) {
 					currentCol++
@@ -113,6 +131,7 @@ func process_key() {
 	// case [EDIT] mode
 	case 1:
 
+		// If character is printable, insert it
 		if keyEvent.Ch != 0 {
 			insert_rune(keyEvent)
 		} else {
@@ -140,12 +159,16 @@ func process_key() {
 	}
 }
 
-func toggle_mode(event termbox.Event) {
-	switch event.Key {
-	case termbox.KeyEsc:
+func switch_mode(modeInp string) {
+	switch modeInp {
+	case "View":
 		mode = 0
-	case termbox.KeyInsert:
+	case "Insert":
 		mode = 1
+
+	// toggle cycles every mode
+	case "Toggle":
+		mode = (mode + 1) % MAX_MODES
 	}
 }
 
@@ -179,7 +202,11 @@ func insert_rune(event termbox.Event) {
 
 func delete_rune(event termbox.Event) {
 	switch event.Key {
+
+	// delete the character to the left
 	case termbox.KeyBackspace, termbox.KeyBackspace2:
+
+		// If not deleting a newline character
 		if currentCol > 0 {
 			currentCol--
 
@@ -190,6 +217,7 @@ func delete_rune(event termbox.Event) {
 
 		} else if currentRow > 0 {
 
+			// If deleting a newline character, wrap the text onto the previous line
 			wrapText := make([]rune, len(textBuffer[currentRow]))
 			copy(wrapText, textBuffer[currentRow][currentCol:])
 
@@ -200,12 +228,16 @@ func delete_rune(event termbox.Event) {
 
 			textBuffer[currentRow-1] = appendLine
 			textBuffer = append(textBuffer[:currentRow], textBuffer[currentRow+1:]...)
+
 			currentRow--
 			currentCol = prevLineLen
 
 		}
 
+	// Delete the character to the right
 	case termbox.KeyDelete:
+
+		// If not deleting a newline character
 		if currentCol < len(textBuffer[currentRow]) {
 
 			deleteLine := make([]rune, len(textBuffer[currentRow])-1)
@@ -215,6 +247,7 @@ func delete_rune(event termbox.Event) {
 
 		} else if currentRow < len(textBuffer)-1 {
 
+			// If deleting a newline character, wrap the next line on top of the currentRow
 			wrapText := textBuffer[currentRow+1]
 
 			currentLineLen := len(textBuffer[currentRow])
@@ -235,6 +268,7 @@ func delete_rune(event termbox.Event) {
 
 func insert_line() {
 
+	// Create a new line, and wrap the remainder of the current line onto the next one
 	newLine := make([]rune, len(textBuffer[currentRow])-currentCol)
 	copy(newLine, textBuffer[currentRow][currentCol:])
 
