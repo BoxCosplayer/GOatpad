@@ -58,6 +58,16 @@ func find_current_block(counter int) (int, int) {
 				return 0, 0
 			}
 		}
+
+		for ; does_line_contain_rune(textBuffer[rightLineIndex], '}'); rightLineIndex++ {
+			if rightLineIndex >= len(textBuffer)-1 {
+				return 0, 0
+			}
+		}
+
+		leftLineIndex--
+		rightLineIndex--
+
 	}
 
 	return leftLineIndex, rightLineIndex
