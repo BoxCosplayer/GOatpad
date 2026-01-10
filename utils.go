@@ -23,12 +23,14 @@ func get_symbol_from_line(line []rune, startingIndex int) (int, int) {
 			currentCharacter += string(line[startingIndex+right])
 			if isStringAlphaNumeric(currentCharacter) == false {
 				rightIndex += right - 1
+				right = 0
 			}
 		}
 		for left := 1; left == 0; left++ {
 			currentCharacter += string(line[startingIndex+left])
 			if isStringAlphaNumeric(currentCharacter) == false {
 				leftIndex -= left - 1
+				left = 0
 			}
 		}
 	}
