@@ -6,9 +6,19 @@ import (
 	termbox "github.com/nsf/termbox-go"
 )
 
-// globals:
-// currentCol, currentRow  = cursor position
-// textBuffer = text buffer
+func get_key() termbox.Event {
+	// Function to detect and grab keypresses,
+	// handled by process_key in keybinds.go
+	var keyEvent termbox.Event
+
+	switch event := termbox.PollEvent(); event.Type {
+	case termbox.EventKey:
+		keyEvent = event
+	case termbox.EventError:
+		panic(event.Err)
+	}
+	return keyEvent
+}
 
 func process_key() {
 	keyEvent := get_key()
@@ -21,6 +31,36 @@ func process_key() {
 
 	case termbox.KeyCtrlS:
 		write_file(filename, fileExtension)
+
+	// cursor up
+	case termbox.KeyArrowUp:
+		if currentRow != 0 {
+			currentRow--
+		}
+
+	// cursor down
+	case termbox.KeyArrowDown:
+		if currentRow < len(textBuffer)-1 {
+			currentRow++
+		}
+
+	// cursor left
+	case termbox.KeyArrowLeft:
+		if currentCol != 0 {
+			currentCol--
+		} else if currentRow > 0 {
+			currentRow--
+			currentCol = len(textBuffer[currentRow])
+		}
+
+	// cursor right
+	case termbox.KeyArrowRight:
+		if currentCol < len(textBuffer[currentRow]) {
+			currentCol++
+		} else if currentRow < len(textBuffer)-1 {
+			currentRow++
+			currentCol = 0
+		}
 	}
 
 	// First, check the mode.
@@ -79,15 +119,15 @@ func process_key() {
 			// ---------- Copy/Paste & Undo/Redo ----------
 
 			// copy line
-			case COPY_KEY:
+			case COPY_LINE_KEY:
 				copy_line()
 
 			// cut line
-			case CUT_KEY:
+			case CUT_LINE_KEY:
 				cut_line()
 
 			// paste line
-			case PASTE_KEY:
+			case PASTE_LINE_KEY:
 				paste_line()
 
 			// delete line
@@ -95,7 +135,7 @@ func process_key() {
 				delete_line()
 
 			// save state
-			case SAVE_STATE:
+			case MANUAL_SAVE_STATE:
 				push_state()
 
 			// rollback state
@@ -107,52 +147,12 @@ func process_key() {
 			if currentCol > len(textBuffer[currentRow]) {
 				currentCol = len(textBuffer[currentRow])
 			}
-
-		} else {
-			// Special Character Pressed
-			switch keyEvent.Key {
-
-			// cursor up
-			case termbox.KeyArrowUp:
-				if currentRow != 0 {
-					currentRow--
-				}
-
-			// cursor down
-			case termbox.KeyArrowDown:
-				if currentRow < len(textBuffer)-1 {
-					currentRow++
-				}
-
-			// cursor left
-			case termbox.KeyArrowLeft:
-				if currentCol != 0 {
-					currentCol--
-				} else if currentRow > 0 {
-					currentRow--
-					currentCol = len(textBuffer[currentRow])
-				}
-
-			// cursor right
-			case termbox.KeyArrowRight:
-				if currentCol < len(textBuffer[currentRow]) {
-					currentCol++
-				} else if currentRow < len(textBuffer)-1 {
-					currentRow++
-					currentCol = 0
-				}
-
-			// Save Program without closing
-			case SAVE_NOQUIT:
-				write_file(filename, fileExtension)
-				modified = false
-			}
-
-			// Bound Cursor within buffer
-			if currentCol > len(textBuffer[currentRow]) {
-				currentCol = len(textBuffer[currentRow])
-			}
 		}
+		// } else {
+		// 	// Special Character Pressed
+		// 	switch keyEvent.Key {
+		// 	}
+		// }
 
 	// case [EDIT] mode
 	case 1:
@@ -290,69 +290,4 @@ func delete_rune(event termbox.Event) {
 	}
 
 	modified = true
-}
-
-func insert_line() {
-
-	// Create a new line, and wrap the remainder of the current line onto the next one
-	newLine := make([]rune, len(textBuffer[currentRow])-currentCol)
-	copy(newLine, textBuffer[currentRow][currentCol:])
-
-	textBuffer[currentRow] = textBuffer[currentRow][:currentCol]
-	textBuffer = append(textBuffer[:currentRow+1], append([][]rune{newLine}, textBuffer[currentRow+1:]...)...)
-
-	currentRow++
-	currentCol = 0
-
-	modified = true
-}
-
-func copy_line() {
-	copyLine := make([]rune, len(textBuffer[currentRow]))
-	copy(copyLine, textBuffer[currentRow])
-	copyBuffer = copyLine
-}
-
-func cut_line() {
-	if (currentRow >= len(textBuffer)) == false {
-		copy_line()
-		delete_line()
-		modified = true
-	}
-}
-
-func paste_line() {
-	if len(copyBuffer) != 0 {
-		// move the data from the copy buffer into a newline **below** the current line
-		// append to the text buffer
-		newLine := make([]rune, len(copyBuffer))
-		copy(newLine, copyBuffer)
-		textBuffer = append(textBuffer[:currentRow+1], append([][]rune{newLine}, textBuffer[currentRow+1:]...)...)
-
-		currentRow++
-		currentCol = 0
-		modified = true
-	}
-}
-
-func delete_line() {
-	textBuffer = append(textBuffer[:currentRow], textBuffer[currentRow+1:]...)
-	modified = true
-}
-
-func push_state() {
-	// Push the current textBuffer onto a stack
-	stateCopy := make([][]rune, len(textBuffer))
-	for i := range textBuffer {
-		stateCopy[i] = make([]rune, len(textBuffer[i]))
-		copy(stateCopy[i], textBuffer[i])
-	}
-	undoStack.push(stateCopy)
-}
-
-func pull_state() {
-	// Pull from the top of the stack, replace the textBuffer with it
-	if len(undoStack.contents) > 0 {
-		textBuffer = undoStack.pop().([][]rune)
-	}
 }
