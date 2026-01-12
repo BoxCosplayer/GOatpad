@@ -116,7 +116,23 @@ func process_key() {
 				termbox.Close()
 				os.Exit(0)
 
-			// ---------- Copy/Paste & Undo/Redo ----------
+			// ---------- Copy/Paste ----------
+
+			// copy line
+			case COPY_SYMBOL_KEY:
+				copy_symbol()
+
+			// cut line
+			case CUT_SYMBOL_KEY:
+				cut_symbol()
+
+			// paste line
+			case PASTE_SYMBOL_KEY:
+				paste_symbol()
+
+			// delete line
+			case DEL_SYMBOL_KEY:
+				delete_symbol()
 
 			// copy line
 			case COPY_LINE_KEY:
@@ -133,6 +149,24 @@ func process_key() {
 			// delete line
 			case DEL_LINE_KEY:
 				delete_line()
+
+			// copy line
+			case COPY_BLOCK_KEY:
+				copy_block()
+
+			// cut line
+			case CUT_BLOCK_KEY:
+				cut_block()
+
+			// paste line
+			case PASTE_BLOCK_KEY:
+				paste_block()
+
+			// delete line
+			case DEL_BLOCK_KEY:
+				delete_block()
+
+			// ---------- Undo/Redo ----------
 
 			// save state
 			case MANUAL_SAVE_STATE:
