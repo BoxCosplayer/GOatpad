@@ -58,7 +58,9 @@ func copy_symbol() {
 	left, right := get_symbol_from_line(currentLine, currentCol)
 	symbol := currentLine[left:right]
 
-	copyBuffer.contents[0] = symbol
+	symbolCopy := make([]rune, len(symbol))
+	copy(symbolCopy, symbol)
+	copyBuffer.contents = [][]rune{symbolCopy}
 	copyBuffer.bufferType = "symbol"
 }
 

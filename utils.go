@@ -12,26 +12,33 @@ func is_string_alphanumeric(s string) bool {
 }
 
 func get_symbol_from_line(line []rune, startingIndex int) (int, int) {
+	if len(line) == 0 {
+		return 0, 0
+	}
+	if startingIndex < 0 {
+		return 0, 0
+	}
+	if startingIndex >= len(line) {
+		return 0, 0
+	}
 
 	rightIndex := startingIndex
 	leftIndex := startingIndex
 
-	// While True Equivalent
-	currentCharacter := string(line[startingIndex])
-	if is_string_alphanumeric(currentCharacter) {
-		for left := 1; left == 0; left++ {
-			currentCharacter += string(line[startingIndex-left])
-			if is_string_alphanumeric(currentCharacter) == false {
-				leftIndex -= left - 1
-				left = 0
+	if unicode.IsLetter(line[startingIndex]) || unicode.IsDigit(line[startingIndex]) {
+		// Scan left while alphanumeric
+		for left := startingIndex - 1; left >= 0; left-- {
+			if !unicode.IsLetter(line[left]) && !unicode.IsDigit(line[left]) {
+				break
 			}
+			leftIndex = left
 		}
-		for right := 1; right == 0; right++ {
-			currentCharacter += string(line[startingIndex+right])
-			if is_string_alphanumeric(currentCharacter) == false {
-				rightIndex += right - 1
-				right = 0
+		// Scan right while alphanumeric
+		for right := startingIndex + 1; right < len(line); right++ {
+			if !unicode.IsLetter(line[right]) && !unicode.IsDigit(line[right]) {
+				break
 			}
+			rightIndex = right + 1
 		}
 	}
 
