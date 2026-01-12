@@ -150,12 +150,12 @@ func copy_block() {
 	prevCol = currentCol
 
 	left, right := find_current_block(blockCounter)
-	copyBuffer.contents = [][]rune{}
+	copyBuffer.contents = make([][]rune, right-left+1)
 
 	for i := left; i <= right; i++ {
-		copyLine := make([]rune, len(textBuffer[i])+1)
-		copy(copyLine[:len(textBuffer[i])], textBuffer[i])
-		copyBuffer.contents[left-i] = copyLine
+		copyLine := make([]rune, len(textBuffer[i]))
+		copy(copyLine, textBuffer[i])
+		copyBuffer.contents[i-left] = copyLine
 	}
 	copyBuffer.bufferType = "block"
 	blockCounter++
@@ -184,9 +184,11 @@ func paste_block() {
 }
 
 func delete_block() {
-	left, right := find_current_block(0)
-	textBuffer = append(textBuffer[:left], textBuffer[right+1:]...)
-	modified = true
+	if len(textBuffer) > 1 {
+		left, right := find_current_block(0)
+		textBuffer = append(textBuffer[:left], textBuffer[right+1:]...)
+		modified = true
+	}
 }
 
 // ---------- State Saving ----------
