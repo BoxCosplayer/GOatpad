@@ -54,6 +54,8 @@ func insert_line() {
 // ---------- Symbol Copying ----------
 
 func copy_symbol() {
+	// Find the first and last character of a symbol,
+	// which is detected using non Alphanumeric chars
 	currentLine := textBuffer[currentRow]
 	left, right := get_symbol_from_line(currentLine, currentCol)
 	symbol := currentLine[left:right]
@@ -141,7 +143,11 @@ var (
 )
 
 func copy_block() {
+	// Cycle through blocks so that you can "choose" the scope
+	// if cursor is in the middle of a block
 
+	// This only works by using the same keybind whilst
+	// cursorPos doesnt change
 	if currentRow != prevRow || currentCol != prevCol {
 		blockCounter = 0
 	}
@@ -149,6 +155,8 @@ func copy_block() {
 	prevRow = currentRow
 	prevCol = currentCol
 
+	// Find the first and last line of a block,
+	// which is where the curly braces are located
 	left, right := find_current_block(blockCounter)
 	copyBuffer.contents = make([][]rune, right-left+1)
 
@@ -184,6 +192,8 @@ func paste_block() {
 }
 
 func delete_block() {
+	// Like the above, this has the same function as delete_line()
+	// if there are no blocks selected, needs same safeguards
 	if len(textBuffer) > 1 {
 		left, right := find_current_block(0)
 		textBuffer = append(textBuffer[:left], textBuffer[right+1:]...)

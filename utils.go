@@ -12,6 +12,10 @@ func is_string_alphanumeric(s string) bool {
 }
 
 func get_symbol_from_line(line []rune, startingIndex int) (int, int) {
+	// Symbol is detected using surrounding
+	// alphanumeric characters
+
+	// edge cases
 	if len(line) == 0 {
 		return 0, 0
 	}
@@ -45,7 +49,7 @@ func get_symbol_from_line(line []rune, startingIndex int) (int, int) {
 	return leftIndex, rightIndex
 }
 
-func does_line_contain_rune(line []rune, searchRune rune) bool {
+func does_array_contain_rune(line []rune, searchRune rune) bool {
 	for _, r := range line {
 		if r == searchRune {
 			return true
@@ -55,6 +59,7 @@ func does_line_contain_rune(line []rune, searchRune rune) bool {
 }
 
 func find_current_block(counter int) (int, int) {
+	// Fast-path guardrails for empty buffer or invalid cursor row.
 	if len(textBuffer) == 0 {
 		return 0, 0
 	}
@@ -66,10 +71,6 @@ func find_current_block(counter int) (int, int) {
 		return last, last
 	}
 
-	type bracePos struct {
-		row int
-		col int
-	}
 	openStack := make([]bracePos, 0, 8)
 
 	// Track unmatched opening braces up to the current row.
@@ -87,12 +88,14 @@ func find_current_block(counter int) (int, int) {
 		}
 	}
 
+	// Pick the Nth enclosing block (counter=0 is the innermost).
 	targetIndex := len(openStack) - 1 - counter
 	if targetIndex < 0 {
 		return currentRow, currentRow
 	}
 	start := openStack[targetIndex]
 
+	// Scan forward from the opening brace to find the matching closing brace.
 	depth := 0
 	for row := start.row; row < len(textBuffer); row++ {
 		line := textBuffer[row]
