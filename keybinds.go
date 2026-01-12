@@ -167,6 +167,11 @@ func switch_mode(modeInp string) {
 }
 
 func insert_rune(event termbox.Event) {
+
+	if currentCol > len(textBuffer[currentRow]) {
+		currentCol = len(textBuffer[currentRow])
+	}
+
 	rowBuffer := make([]rune, len(textBuffer[currentRow])+1)
 
 	// Populate line buffer with currentRow contents
