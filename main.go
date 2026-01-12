@@ -36,7 +36,7 @@ var (
 	modified      bool
 
 	textBuffer = [][]rune{{}}
-	copyBuffer = CopyBuffer{[]rune{}, ""}
+	copyBuffer = CopyBuffer{[][]rune{{}}, ""}
 )
 
 func read_file(filename string) {
@@ -155,7 +155,7 @@ func display_status_bar() {
 	if len(copyBuffer.contents) > 0 {
 		copyStatus = " [COPY]"
 	}
-	if len(undoBuffer) > 0 {
+	if len(undoStack.contents) > 0 {
 		undoStatus = " [UNDO]"
 	}
 
