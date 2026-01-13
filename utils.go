@@ -121,3 +121,8 @@ func find_current_block(counter int) (int, int) {
 
 	return start.row, start.row
 }
+
+func mark_screen_dirty() {
+	screenDirty = true
+	modified = true
+}

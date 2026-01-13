@@ -257,7 +257,7 @@ func insert_rune(event termbox.Event) {
 	textBuffer[currentRow] = rowBuffer
 	currentCol++
 
-	modified = true
+	mark_screen_dirty()
 }
 
 func delete_rune(event termbox.Event) {
@@ -323,5 +323,5 @@ func delete_rune(event termbox.Event) {
 		}
 	}
 
-	modified = true
+	mark_screen_dirty()
 }

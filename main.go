@@ -37,6 +37,8 @@ var (
 
 	textBuffer = [][]rune{{}}
 	copyBuffer = CopyBuffer{[][]rune{{}}, ""}
+
+	screenDirty = true
 )
 
 func read_file(filename string) {
@@ -79,7 +81,10 @@ func read_file(filename string) {
 	}
 }
 
-func scroll_text_buffer() {
+func scroll_text_buffer() bool {
+	prevOffsetRow := offsetRow
+	prevOffsetCol := offsetCol
+
 	if currentRow < offsetRow {
 		offsetRow = currentRow
 	}
@@ -92,6 +97,8 @@ func scroll_text_buffer() {
 	if currentCol >= offsetCol+COLS {
 		offsetCol = currentCol - COLS + 1
 	}
+
+	return prevOffsetRow != offsetRow || prevOffsetCol != offsetCol
 }
 
 func display_text_buffer() {
@@ -219,23 +226,36 @@ func run_editor() {
 	for {
 
 		// -1 row for the status bar
-		COLS, ROWS = termbox.Size()
-		ROWS--
+		newCols, newRows := termbox.Size()
+		newRows--
 
 		// status bar errors is there is too little space
-		if COLS < 80 {
-			COLS = 80
+		if newCols < 80 {
+			newCols = 80
+		}
+
+		if newCols != COLS || newRows != ROWS {
+			COLS, ROWS = newCols, newRows
+			screenDirty = true
+		} else {
+			COLS, ROWS = newCols, newRows
 		}
 
 		// Empty the terminal, and show the template text
-		termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
-		scroll_text_buffer()
-		display_text_buffer()
+		if scroll_text_buffer() {
+			screenDirty = true
+		}
+		if screenDirty {
+			termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
+			display_text_buffer()
+		}
 		display_status_bar()
 
 		// Draw Cursor, and syncronise terminal
 		termbox.SetCursor(currentCol-offsetCol, currentRow-offsetRow)
 		termbox.Flush()
+
+		screenDirty = false
 
 		// Wait for an event
 		process_key()
