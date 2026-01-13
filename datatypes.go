@@ -26,3 +26,9 @@ type CopyBuffer struct {
 	contents   [][]rune
 	bufferType string
 }
+
+// bracePos tracks an opening brace position in the text buffer.
+type bracePos struct {
+	row int
+	col int
+}

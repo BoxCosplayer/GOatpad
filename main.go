@@ -152,7 +152,7 @@ func display_status_bar() {
 		fileStatus += " saved"
 	}
 
-	if len(copyBuffer.contents) > 0 {
+	if len(copyBuffer.contents[0]) > 0 {
 		copyStatus = " [COPY]"
 	}
 	if len(undoStack.contents) > 0 {
