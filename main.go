@@ -238,12 +238,12 @@ func run_editor() {
 		termbox.Flush()
 
 		// Wait for an event
+		process_key()
 
+		// Ensure cursor stays within boundaries of buffer
 		if currentCol > len(textBuffer[currentRow]) {
 			currentCol = len(textBuffer[currentRow])
 		}
-
-		process_key()
 	}
 }
 
