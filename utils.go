@@ -26,7 +26,7 @@ func get_symbol_from_line(line []rune, startingIndex int) (int, int) {
 		return 0, 0
 	}
 
-	rightIndex := startingIndex
+	rightIndex := startingIndex + 1
 	leftIndex := startingIndex
 
 	if unicode.IsLetter(line[startingIndex]) || unicode.IsDigit(line[startingIndex]) {
