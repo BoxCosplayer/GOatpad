@@ -63,6 +63,8 @@ func process_key() {
 					currentCol = 0
 				}
 
+			// ---------- Program Saving ----------
+
 			// Exit program with saving
 			case QUIT_SAVE:
 				write_file(filename, fileExtension)
@@ -74,6 +76,31 @@ func process_key() {
 				termbox.Close()
 				os.Exit(0)
 
+			// ---------- Copy/Paste & Undo/Redo ----------
+
+			// copy line
+			case COPY_KEY:
+				copy_line()
+
+			// cut line
+			case CUT_KEY:
+				cut_line()
+
+			// paste line
+			case PASTE_KEY:
+				paste_line()
+
+			// delete line
+			case DEL_LINE_KEY:
+				delete_line()
+
+			// save state
+			case SAVE_STATE:
+				push_state()
+
+			// rollback state
+			case ROLLBACK_STATE:
+				pull_state()
 			}
 
 			// Bound Cursor within buffer
@@ -114,6 +141,11 @@ func process_key() {
 					currentRow++
 					currentCol = 0
 				}
+
+			// Save Program without closing
+			case SAVE_NOQUIT:
+				write_file(filename, fileExtension)
+				modified = false
 			}
 
 			// Bound Cursor within buffer
@@ -273,4 +305,54 @@ func insert_line() {
 	currentCol = 0
 
 	modified = true
+}
+
+func copy_line() {
+	copyLine := make([]rune, len(textBuffer[currentRow]))
+	copy(copyLine, textBuffer[currentRow])
+	copyBuffer = copyLine
+}
+
+func cut_line() {
+	if (currentRow >= len(textBuffer)) == false {
+		copy_line()
+		delete_line()
+		modified = true
+	}
+}
+
+func paste_line() {
+	if len(copyBuffer) != 0 {
+		// move the data from the copy buffer into a newline **below** the current line
+		// append to the text buffer
+		newLine := make([]rune, len(copyBuffer))
+		copy(newLine, copyBuffer)
+		textBuffer = append(textBuffer[:currentRow+1], append([][]rune{newLine}, textBuffer[currentRow+1:]...)...)
+
+		currentRow++
+		currentCol = 0
+		modified = true
+	}
+}
+
+func delete_line() {
+	textBuffer = append(textBuffer[:currentRow], textBuffer[currentRow+1:]...)
+	modified = true
+}
+
+func push_state() {
+	// Push the current textBuffer onto a stack
+	stateCopy := make([][]rune, len(textBuffer))
+	for i := range textBuffer {
+		stateCopy[i] = make([]rune, len(textBuffer[i]))
+		copy(stateCopy[i], textBuffer[i])
+	}
+	undoStack.push(stateCopy)
+}
+
+func pull_state() {
+	// Pull from the top of the stack, replace the textBuffer with it
+	if len(undoStack.contents) > 0 {
+		textBuffer = undoStack.pop().([][]rune)
+	}
 }
