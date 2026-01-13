@@ -21,3 +21,8 @@ func (s *stack) pop() interface{} {
 	s.contents = s.contents[:len(s.contents)-1]
 	return value
 }
+
+type CopyBuffer struct {
+	contents   []rune
+	bufferType string
+}

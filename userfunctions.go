@@ -1,0 +1,186 @@
+package main
+
+import (
+	"bufio"
+	"fmt"
+	"os"
+)
+
+func write_file(filename string, fileExtension string) {
+	// Create or open the 'filename.extension'
+	file, err := os.Create(filename + fileExtension)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	defer file.Close()
+
+	// Write each line to the file manually
+	// by ensuring to add newlines
+	writer := bufio.NewWriter(file)
+	for row, line := range textBuffer {
+		newLine := "\n"
+
+		if row == len(textBuffer)-1 {
+			newLine = ""
+		}
+
+		_, err = writer.WriteString(string(line) + newLine)
+		if err != nil {
+			fmt.Println("Error: ", err)
+		}
+
+		writer.Flush()
+		modified = false
+	}
+
+}
+
+func insert_line() {
+
+	// Create a new line, and wrap the remainder of the current line onto the next one
+	newLine := make([]rune, len(textBuffer[currentRow])-currentCol)
+	copy(newLine, textBuffer[currentRow][currentCol:])
+
+	textBuffer[currentRow] = textBuffer[currentRow][:currentCol]
+	textBuffer = append(textBuffer[:currentRow+1], append([][]rune{newLine}, textBuffer[currentRow+1:]...)...)
+
+	currentRow++
+	currentCol = 0
+
+	modified = true
+}
+
+// ---------- Symbol Copying ----------
+
+func copy_symbol() {
+	currentLine := textBuffer[currentRow]
+	left, right := get_symbol_from_line(currentLine, currentCol)
+	symbol := currentLine[left:right]
+
+	copyBuffer.contents = symbol
+	copyBuffer.bufferType = "symbol"
+}
+
+func cut_symbol() {
+	copy_symbol()
+	delete_symbol()
+	modified = true
+}
+
+func paste_symbol() {
+	if len(copyBuffer.contents) != 0 && copyBuffer.bufferType == "symbol" {
+		symbolLength := len(copyBuffer.contents)
+
+		newLine := make([]rune, len(textBuffer[currentRow])+symbolLength)
+
+		copy(newLine[:currentCol], textBuffer[currentRow][:currentCol])
+		copy(newLine[currentCol:currentCol+symbolLength], copyBuffer.contents)
+		copy(newLine[currentCol+symbolLength:], textBuffer[currentRow][currentCol:])
+
+		textBuffer[currentRow] = newLine
+		currentCol += len(copyBuffer.contents)
+		modified = true
+	}
+}
+
+func delete_symbol() {
+	currentLine := textBuffer[currentRow]
+	left, right := get_symbol_from_line(currentLine, currentCol)
+
+	textBuffer[currentRow] = append(textBuffer[currentRow][:left], textBuffer[currentRow][right:]...)
+	modified = true
+}
+
+// TODO: rename symbol
+
+// ---------- Line Copying ----------
+
+func copy_line() {
+	copyLine := make([]rune, len(textBuffer[currentRow]))
+	copy(copyLine, textBuffer[currentRow])
+	copyBuffer.contents = copyLine
+	copyBuffer.bufferType = "line"
+}
+
+func cut_line() {
+	if (currentRow >= len(textBuffer)) == false {
+		copy_line()
+		delete_line()
+		modified = true
+	}
+}
+
+func paste_line() {
+	if len(copyBuffer.contents) != 0 && copyBuffer.bufferType == "line" {
+		// move the data from the copy buffer into a newline **below** the current line
+		// append to the text buffer
+		newLine := make([]rune, len(copyBuffer.contents))
+		copy(newLine, copyBuffer.contents)
+		textBuffer = append(textBuffer[:currentRow+1], append([][]rune{newLine}, textBuffer[currentRow+1:]...)...)
+
+		currentRow++
+		currentCol = 0
+		modified = true
+	}
+}
+
+func delete_line() {
+	textBuffer = append(textBuffer[:currentRow], textBuffer[currentRow+1:]...)
+	modified = true
+}
+
+// ---------- Block Copying ----------
+
+func copy_block() {
+	copyLine := make([]rune, len(textBuffer[currentRow]))
+	copy(copyLine, textBuffer[currentRow])
+	copyBuffer.contents = copyLine
+	copyBuffer.bufferType = "block"
+}
+
+func cut_block() {
+	if (currentRow >= len(textBuffer)) == false {
+		copy_line()
+		delete_line()
+		modified = true
+	}
+}
+
+func paste_block() {
+	if len(copyBuffer.contents) != 0 && copyBuffer.bufferType == "block" {
+		// move the data from the copy buffer into a newline **below** the current line
+		// append to the text buffer
+		newLine := make([]rune, len(copyBuffer.contents))
+		copy(newLine, copyBuffer.contents)
+		textBuffer = append(textBuffer[:currentRow+1], append([][]rune{newLine}, textBuffer[currentRow+1:]...)...)
+
+		currentRow++
+		currentCol = 0
+		modified = true
+	}
+}
+
+func delete_block() {
+	textBuffer = append(textBuffer[:currentRow], textBuffer[currentRow+1:]...)
+	modified = true
+}
+
+// ---------- State Saving ----------
+
+func push_state() {
+	// Push the current textBuffer onto a stack
+	stateCopy := make([][]rune, len(textBuffer))
+	for i := range textBuffer {
+		stateCopy[i] = make([]rune, len(textBuffer[i]))
+		copy(stateCopy[i], textBuffer[i])
+	}
+	undoStack.push(stateCopy)
+}
+
+func pull_state() {
+	// Pull from the top of the stack, replace the textBuffer with it
+	if len(undoStack.contents) > 0 {
+		textBuffer = undoStack.pop().([][]rune)
+	}
+}

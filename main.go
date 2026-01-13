@@ -28,14 +28,15 @@ var (
 	offsetCol int
 	offsetRow int
 
-	textBuffer = [][]rune{{}}
-	undoBuffer = [][]rune{}
-	copyBuffer = [][]rune{}
+	undoStack stack
 
 	file          string
 	filename      string
 	fileExtension string
 	modified      bool
+
+	textBuffer = [][]rune{{}}
+	copyBuffer = CopyBuffer{[]rune{}, ""}
 )
 
 func read_file(filename string) {
@@ -76,36 +77,6 @@ func read_file(filename string) {
 	if lineNumber == 0 {
 		textBuffer = append(textBuffer, []rune{})
 	}
-}
-
-func write_file(filename string, fileExtension string) {
-	// Create or open the 'filename.extension'
-	file, err := os.Create(filename + fileExtension)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	defer file.Close()
-
-	// Write each line to the file manually
-	// by ensuring to add newlines
-	writer := bufio.NewWriter(file)
-	for row, line := range textBuffer {
-		newLine := "\n"
-
-		if row == len(textBuffer)-1 {
-			newLine = ""
-		}
-
-		_, err = writer.WriteString(string(line) + newLine)
-		if err != nil {
-			fmt.Println("Error: ", err)
-		}
-
-		writer.Flush()
-		modified = false
-	}
-
 }
 
 func scroll_text_buffer() {
@@ -181,7 +152,7 @@ func display_status_bar() {
 		fileStatus += " saved"
 	}
 
-	if len(copyBuffer) > 0 {
+	if len(copyBuffer.contents) > 0 {
 		copyStatus = " [COPY]"
 	}
 	if len(undoBuffer) > 0 {
@@ -219,20 +190,6 @@ func print_message(col int, row int, fg termbox.Attribute, bg termbox.Attribute,
 		termbox.SetCell(col, row, ch, fg, bg)
 		col += runewidth.RuneWidth(ch)
 	}
-}
-
-func get_key() termbox.Event {
-	// Function to detect and grab keypresses,
-	// handled by process_key in keybinds.go
-	var keyEvent termbox.Event
-
-	switch event := termbox.PollEvent(); event.Type {
-	case termbox.EventKey:
-		keyEvent = event
-	case termbox.EventError:
-		panic(event.Err)
-	}
-	return keyEvent
 }
 
 func run_editor() {
