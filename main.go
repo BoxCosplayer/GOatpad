@@ -126,19 +126,24 @@ func display_text_buffer() {
 		writingCol := 0
 		if textBufferRow >= 0 && textBufferRow < len(textBuffer) {
 			line := textBuffer[textBufferRow]
-			for cursorCol := 0; cursorCol < COLS; cursorCol++ {
+			lineLen := len(line)
+			visibleCols := lineLen - offsetCol
+			if visibleCols < 0 {
+				visibleCols = 0
+			}
+			if visibleCols > COLS {
+				visibleCols = COLS
+			}
+			for cursorCol := 0; cursorCol < visibleCols; cursorCol++ {
 				textBufferCol := cursorCol + offsetCol
 
-				// Bound checking
-				if textBufferCol < len(line) {
-					// ...Print character to terminal
-					if line[textBufferCol] != '\t' {
-						termbox.SetChar(writingCol, cursorRow, line[textBufferCol])
-						writingCol++
-					} else {
-						termbox.SetCell(writingCol, cursorRow, ' ', termbox.ColorDefault, termbox.ColorDefault)
-						writingCol++
-					}
+				// ...Print character to terminal
+				if line[textBufferCol] != '\t' {
+					termbox.SetChar(writingCol, cursorRow, line[textBufferCol])
+					writingCol++
+				} else {
+					termbox.SetCell(writingCol, cursorRow, ' ', termbox.ColorDefault, termbox.ColorDefault)
+					writingCol++
 				}
 			}
 			dirtyRows[textBufferRow] = false
