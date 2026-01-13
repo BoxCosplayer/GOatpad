@@ -48,7 +48,8 @@ func insert_line() {
 	currentRow++
 	currentCol = 0
 
-	mark_screen_dirty()
+	mark_viewport_dirty()
+	mark_line_dirty(currentRow)
 }
 
 // ---------- Symbol Copying ----------
@@ -83,7 +84,7 @@ func paste_symbol() {
 
 		textBuffer[currentRow] = newLine
 		currentCol += len(copyBuffer.contents[0])
-		mark_screen_dirty()
+		mark_line_dirty(currentRow)
 	}
 }
 
@@ -92,7 +93,7 @@ func delete_symbol() {
 	left, right := get_symbol_from_line(currentLine, currentCol)
 
 	textBuffer[currentRow] = append(textBuffer[currentRow][:left], textBuffer[currentRow][right:]...)
-	mark_screen_dirty()
+	mark_line_dirty(currentRow)
 }
 
 // TODO: rename symbol
@@ -123,13 +124,15 @@ func paste_line() {
 
 		currentRow++
 		currentCol = 0
-		mark_screen_dirty()
+		mark_viewport_dirty()
+		mark_line_dirty(currentRow)
 	}
 }
 
 func delete_line() {
 	textBuffer = append(textBuffer[:currentRow], textBuffer[currentRow+1:]...)
-	mark_screen_dirty()
+	mark_viewport_dirty()
+	mark_line_dirty(currentRow)
 }
 
 // ---------- Block Copying ----------
@@ -184,7 +187,8 @@ func paste_block() {
 		}
 
 		currentCol = 0
-		mark_screen_dirty()
+		mark_viewport_dirty()
+		mark_line_dirty(currentRow)
 	}
 }
 
@@ -194,7 +198,8 @@ func delete_block() {
 	if len(textBuffer) > 1 && currentRow != len(textBuffer)-1 {
 		left, right := find_current_block(0)
 		textBuffer = append(textBuffer[:left], textBuffer[right+1:]...)
-		mark_screen_dirty()
+		mark_viewport_dirty()
+		mark_line_dirty(currentRow)
 	}
 }
 
@@ -214,6 +219,7 @@ func pull_state() {
 	// Pull from the top of the stack, replace the textBuffer with it
 	if len(undoStack.contents) > 0 {
 		textBuffer = undoStack.pop().([][]rune)
-		mark_screen_dirty()
+		mark_viewport_dirty()
+		mark_line_dirty(currentRow)
 	}
 }

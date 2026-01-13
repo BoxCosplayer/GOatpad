@@ -257,10 +257,12 @@ func insert_rune(event termbox.Event) {
 	textBuffer[currentRow] = rowBuffer
 	currentCol++
 
-	mark_screen_dirty()
+	mark_line_dirty(currentRow)
 }
 
 func delete_rune(event termbox.Event) {
+	lineShifted := false
+
 	switch event.Key {
 
 	// delete the character to the left
@@ -291,6 +293,7 @@ func delete_rune(event termbox.Event) {
 
 			currentRow--
 			currentCol = prevLineLen
+			lineShifted = true
 
 		}
 
@@ -319,9 +322,13 @@ func delete_rune(event termbox.Event) {
 			textBuffer = append(textBuffer[:currentRow+1], textBuffer[currentRow+2:]...)
 
 			currentCol = currentLineLen
+			lineShifted = true
 
 		}
 	}
 
-	mark_screen_dirty()
+	if lineShifted {
+		mark_viewport_dirty()
+	}
+	mark_line_dirty(currentRow)
 }
