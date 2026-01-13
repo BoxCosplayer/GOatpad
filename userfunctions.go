@@ -58,7 +58,7 @@ func copy_symbol() {
 	left, right := get_symbol_from_line(currentLine, currentCol)
 	symbol := currentLine[left:right]
 
-	copyBuffer.contents = symbol
+	copyBuffer.contents[0] = symbol
 	copyBuffer.bufferType = "symbol"
 }
 
@@ -69,17 +69,17 @@ func cut_symbol() {
 }
 
 func paste_symbol() {
-	if len(copyBuffer.contents) != 0 && copyBuffer.bufferType == "symbol" {
-		symbolLength := len(copyBuffer.contents)
+	if len(copyBuffer.contents[0]) != 0 && copyBuffer.bufferType == "symbol" {
+		symbolLength := len(copyBuffer.contents[0])
 
 		newLine := make([]rune, len(textBuffer[currentRow])+symbolLength)
 
 		copy(newLine[:currentCol], textBuffer[currentRow][:currentCol])
-		copy(newLine[currentCol:currentCol+symbolLength], copyBuffer.contents)
+		copy(newLine[currentCol:currentCol+symbolLength], copyBuffer.contents[0])
 		copy(newLine[currentCol+symbolLength:], textBuffer[currentRow][currentCol:])
 
 		textBuffer[currentRow] = newLine
-		currentCol += len(copyBuffer.contents)
+		currentCol += len(copyBuffer.contents[0])
 		modified = true
 	}
 }
@@ -99,7 +99,7 @@ func delete_symbol() {
 func copy_line() {
 	copyLine := make([]rune, len(textBuffer[currentRow]))
 	copy(copyLine, textBuffer[currentRow])
-	copyBuffer.contents = copyLine
+	copyBuffer.contents[0] = copyLine
 	copyBuffer.bufferType = "line"
 }
 
@@ -112,11 +112,11 @@ func cut_line() {
 }
 
 func paste_line() {
-	if len(copyBuffer.contents) != 0 && copyBuffer.bufferType == "line" {
+	if len(copyBuffer.contents[0]) != 0 && copyBuffer.bufferType == "line" {
 		// move the data from the copy buffer into a newline **below** the current line
 		// append to the text buffer
-		newLine := make([]rune, len(copyBuffer.contents))
-		copy(newLine, copyBuffer.contents)
+		newLine := make([]rune, len(copyBuffer.contents[0]))
+		copy(newLine, copyBuffer.contents[0])
 		textBuffer = append(textBuffer[:currentRow+1], append([][]rune{newLine}, textBuffer[currentRow+1:]...)...)
 
 		currentRow++
@@ -132,37 +132,58 @@ func delete_line() {
 
 // ---------- Block Copying ----------
 
+var (
+	blockCounter = 0
+	prevRow      = 0
+	prevCol      = 0
+)
+
 func copy_block() {
-	copyLine := make([]rune, len(textBuffer[currentRow]))
-	copy(copyLine, textBuffer[currentRow])
-	copyBuffer.contents = copyLine
+
+	if currentRow != prevRow || currentCol != prevCol {
+		blockCounter = 0
+	}
+
+	prevRow = currentRow
+	prevCol = currentCol
+
+	left, right := find_current_block(blockCounter)
+	copyBuffer.contents = [][]rune{}
+
+	for i := left; i <= right; i++ {
+		copyLine := make([]rune, len(textBuffer[i])+1)
+		copy(copyLine[:len(textBuffer[i])], textBuffer[i])
+		copyBuffer.contents[left-i] = copyLine
+	}
 	copyBuffer.bufferType = "block"
+	blockCounter++
 }
 
 func cut_block() {
-	if (currentRow >= len(textBuffer)) == false {
-		copy_line()
-		delete_line()
-		modified = true
-	}
+	copy_block()
+	delete_block()
+	modified = true
 }
 
+// for line in copy buffer, paste_line()
 func paste_block() {
-	if len(copyBuffer.contents) != 0 && copyBuffer.bufferType == "block" {
-		// move the data from the copy buffer into a newline **below** the current line
-		// append to the text buffer
-		newLine := make([]rune, len(copyBuffer.contents))
-		copy(newLine, copyBuffer.contents)
-		textBuffer = append(textBuffer[:currentRow+1], append([][]rune{newLine}, textBuffer[currentRow+1:]...)...)
+	if len(copyBuffer.contents[0]) != 0 && copyBuffer.bufferType == "block" {
+		// for line in copyBuffer (which is of type [][]rune), paste_line()
+		for _, line := range copyBuffer.contents {
+			newLine := make([]rune, len(line))
+			copy(newLine, line)
+			textBuffer = append(textBuffer[:currentRow+1], append([][]rune{newLine}, textBuffer[currentRow+1:]...)...)
+			currentRow++
+		}
 
-		currentRow++
 		currentCol = 0
 		modified = true
 	}
 }
 
 func delete_block() {
-	textBuffer = append(textBuffer[:currentRow], textBuffer[currentRow+1:]...)
+	left, right := find_current_block(0)
+	textBuffer = append(textBuffer[:left], textBuffer[right+1:]...)
 	modified = true
 }
 

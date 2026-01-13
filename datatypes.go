@@ -23,6 +23,6 @@ func (s *stack) pop() interface{} {
 }
 
 type CopyBuffer struct {
-	contents   []rune
+	contents   [][]rune
 	bufferType string
 }
