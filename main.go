@@ -16,6 +16,26 @@ const (
 	MAX_MODES = 2
 )
 
+type statusBarState struct {
+	mode          int
+	row           int
+	col           int
+	filename      string
+	fileExtension string
+	modified      bool
+	lineCount     int
+	copyActive    bool
+	undoActive    bool
+	cols          int
+	rows          int
+}
+
+type statusBarCache struct {
+	last    statusBarState
+	message string
+	valid   bool
+}
+
 var (
 	mode int
 
@@ -40,6 +60,8 @@ var (
 
 	dirtyRows     []bool
 	viewportDirty = true
+
+	statusBar statusBarCache
 )
 
 func read_file(filename string) {
@@ -165,6 +187,25 @@ func clear_screen_row(row int) {
 }
 
 func display_status_bar() {
+	state := statusBarState{
+		mode:          mode,
+		row:           currentRow,
+		col:           currentCol,
+		filename:      filename,
+		fileExtension: fileExtension,
+		modified:      modified,
+		lineCount:     len(textBuffer),
+		copyActive:    len(copyBuffer.contents[0]) > 0,
+		undoActive:    len(undoStack.contents) > 0,
+		cols:          COLS,
+		rows:          ROWS,
+	}
+	if statusBar.valid && state == statusBar.last {
+		return
+	}
+	statusBar.last = state
+	statusBar.valid = true
+
 	var (
 		modeStatus   string // current mode
 		fileStatus   string // filename, total number of lines, modification status
@@ -173,47 +214,48 @@ func display_status_bar() {
 		undoStatus   string // whether the undo buffer is active
 	)
 
-	if mode == 1 {
+	if state.mode == 1 {
 		modeStatus = " [EDIT] "
 	} else {
 		modeStatus = " [VIEW] "
 	}
 
-	if modified {
+	if state.modified {
 		fileStatus += " modified"
 	} else {
 		fileStatus += " saved"
 	}
 
-	if len(copyBuffer.contents[0]) > 0 {
+	if state.copyActive {
 		copyStatus = " [COPY]"
 	}
-	if len(undoStack.contents) > 0 {
+	if state.undoActive {
 		undoStatus = " [UNDO]"
 	}
 
-	cursorStatus = " Line " + strconv.Itoa(currentRow+1) + " Col " + strconv.Itoa(currentCol+1) + " "
+	cursorStatus = " Line " + strconv.Itoa(state.row+1) + " Col " + strconv.Itoa(state.col+1) + " "
 
-	fileStatus = fileExtension + " - " + strconv.Itoa(len(textBuffer)) + " lines" + fileStatus
+	fileStatus = state.fileExtension + " - " + strconv.Itoa(state.lineCount) + " lines" + fileStatus
 
 	// Logic to clamp filename to the leftover space
-	emptySpace := COLS - (len(modeStatus) + len(copyStatus) + len(undoStatus) + len(cursorStatus))
-	filenameLength := len(filename)
+	emptySpace := state.cols - (len(modeStatus) + len(copyStatus) + len(undoStatus) + len(cursorStatus))
+	filenameLength := len(state.filename)
 	filenameSpace := emptySpace - len(fileStatus) - TAB_WIDTH - 2
 
 	if filenameLength > filenameSpace {
 		filenameLength = filenameSpace
-		fileStatus = filename[:filenameLength] + ".." + fileStatus
+		fileStatus = state.filename[:filenameLength] + ".." + fileStatus
 	} else {
-		fileStatus = filename[:filenameLength] + fileStatus
+		fileStatus = state.filename[:filenameLength] + fileStatus
 	}
 
 	// Determine amount of space to create between left side and right side of status bar
-	emptySpace = COLS - (len(modeStatus) + len(fileStatus) + len(copyStatus) + len(undoStatus) + len(cursorStatus)) - 4
+	emptySpace = state.cols - (len(modeStatus) + len(fileStatus) + len(copyStatus) + len(undoStatus) + len(cursorStatus)) - 4
 	spaces := strings.Repeat(" ", emptySpace)
 
 	message := modeStatus + fileStatus + copyStatus + undoStatus + spaces + cursorStatus
-	print_message(0, ROWS, termbox.ColorBlack, termbox.ColorWhite, message)
+	statusBar.message = message
+	print_message(0, state.rows, termbox.ColorBlack, termbox.ColorWhite, message)
 
 }
 
