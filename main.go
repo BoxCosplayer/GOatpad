@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -64,12 +65,48 @@ var (
 	statusBar statusBarCache
 )
 
+var tabExpansion = func() []rune {
+	spaces := make([]rune, TAB_WIDTH)
+	for i := range spaces {
+		spaces[i] = ' '
+	}
+	return spaces
+}()
+
+func appendExpandedTabs(dst []rune, line string) []rune {
+	dst = dst[:0]
+	if line == "" {
+		return dst
+	}
+
+	tabCount := strings.Count(line, "\t")
+	needed := len(line) + tabCount*(TAB_WIDTH-1)
+	if cap(dst) < needed {
+		dst = make([]rune, 0, needed)
+	}
+
+	for _, ch := range line {
+		if ch == '\t' {
+			dst = append(dst, tabExpansion...)
+		} else {
+			dst = append(dst, ch)
+		}
+	}
+
+	return dst
+}
+
 func read_file(filename string) {
 	file, err := os.Open(filename)
 
 	// File doesn't exist
 	if err != nil {
-		// sourceFile := filename
+		if len(textBuffer) == 0 {
+			textBuffer = append(textBuffer, []rune{})
+		} else {
+			textBuffer = textBuffer[:1]
+			textBuffer[0] = textBuffer[0][:0]
+		}
 		textBuffer = append(textBuffer, []rune{})
 		return
 	}
@@ -78,24 +115,40 @@ func read_file(filename string) {
 	// Close will always occur, after error handling to avoid null pointer references
 	defer file.Close()
 
-	// Read the file w/ a scanner
-	scanner := bufio.NewScanner(file)
+	const textBufferMinCap = 64
+	if cap(textBuffer) < textBufferMinCap {
+		textBuffer = make([][]rune, 1, textBufferMinCap)
+	} else {
+		textBuffer = textBuffer[:1]
+		textBuffer[0] = textBuffer[0][:0]
+	}
+
+	reader := bufio.NewReader(file)
 	lineNumber := 0
 
-	// For line, append to the textBuffer
-	for scanner.Scan() {
-		line := scanner.Text()
-		for _, ch := range line {
-			if ch == '\t' {
-				for i := 0; i < TAB_WIDTH; i++ {
-					textBuffer[lineNumber] = append(textBuffer[lineNumber], ' ')
-				}
-			} else {
-				textBuffer[lineNumber] = append(textBuffer[lineNumber], ch)
-			}
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil && err != io.EOF {
+			break
 		}
+		if err == io.EOF && len(line) == 0 {
+			break
+		}
+
+		if len(line) > 0 && line[len(line)-1] == '\n' {
+			line = line[:len(line)-1]
+		}
+		if len(line) > 0 && line[len(line)-1] == '\r' {
+			line = line[:len(line)-1]
+		}
+
+		textBuffer[lineNumber] = appendExpandedTabs(textBuffer[lineNumber], line)
 		textBuffer = append(textBuffer, []rune{})
 		lineNumber++
+
+		if err == io.EOF {
+			break
+		}
 	}
 
 	// If new or empty file, pad textBuffer with empty text to not crash
