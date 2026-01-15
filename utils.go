@@ -2,6 +2,33 @@ package main
 
 import "unicode"
 
+func sync_dirty_rows() {
+	if len(dirtyRows) > len(textBuffer) {
+		dirtyRows = dirtyRows[:len(textBuffer)]
+		return
+	}
+	if len(dirtyRows) < len(textBuffer) {
+		dirtyRows = append(dirtyRows, make([]bool, len(textBuffer)-len(dirtyRows))...)
+	}
+}
+
+func mark_line_dirty(row int) {
+	modified = true
+	sync_dirty_rows()
+	if row < 0 || row >= len(textBuffer) {
+		return
+	}
+	dirtyRows[row] = true
+}
+
+func mark_screen_dirty() {
+	mark_line_dirty(currentRow)
+}
+
+func mark_viewport_dirty() {
+	viewportDirty = true
+}
+
 func is_string_alphanumeric(s string) bool {
 	for _, r := range s {
 		if !unicode.IsLetter(r) && !unicode.IsDigit(r) {

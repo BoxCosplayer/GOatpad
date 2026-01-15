@@ -48,7 +48,8 @@ func insert_line() {
 	currentRow++
 	currentCol = 0
 
-	modified = true
+	mark_viewport_dirty()
+	mark_line_dirty(currentRow)
 }
 
 // ---------- Symbol Copying ----------
@@ -69,7 +70,6 @@ func copy_symbol() {
 func cut_symbol() {
 	copy_symbol()
 	delete_symbol()
-	modified = true
 }
 
 func paste_symbol() {
@@ -84,7 +84,7 @@ func paste_symbol() {
 
 		textBuffer[currentRow] = newLine
 		currentCol += len(copyBuffer.contents[0])
-		modified = true
+		mark_line_dirty(currentRow)
 	}
 }
 
@@ -93,7 +93,7 @@ func delete_symbol() {
 	left, right := get_symbol_from_line(currentLine, currentCol)
 
 	textBuffer[currentRow] = append(textBuffer[currentRow][:left], textBuffer[currentRow][right:]...)
-	modified = true
+	mark_line_dirty(currentRow)
 }
 
 // TODO: rename symbol
@@ -111,7 +111,6 @@ func cut_line() {
 	if (currentRow >= len(textBuffer)) == false {
 		copy_line()
 		delete_line()
-		modified = true
 	}
 }
 
@@ -125,13 +124,15 @@ func paste_line() {
 
 		currentRow++
 		currentCol = 0
-		modified = true
+		mark_viewport_dirty()
+		mark_line_dirty(currentRow)
 	}
 }
 
 func delete_line() {
 	textBuffer = append(textBuffer[:currentRow], textBuffer[currentRow+1:]...)
-	modified = true
+	mark_viewport_dirty()
+	mark_line_dirty(currentRow)
 }
 
 // ---------- Block Copying ----------
@@ -172,7 +173,6 @@ func copy_block() {
 func cut_block() {
 	copy_block()
 	delete_block()
-	modified = true
 }
 
 // for line in copy buffer, paste_line()
@@ -187,17 +187,19 @@ func paste_block() {
 		}
 
 		currentCol = 0
-		modified = true
+		mark_viewport_dirty()
+		mark_line_dirty(currentRow)
 	}
 }
 
 func delete_block() {
 	// Like the above, this has the same function as delete_line()
 	// if there are no blocks selected, needs same safeguards
-	if len(textBuffer) > 1 {
+	if len(textBuffer) > 1 && currentRow != len(textBuffer)-1 {
 		left, right := find_current_block(0)
 		textBuffer = append(textBuffer[:left], textBuffer[right+1:]...)
-		modified = true
+		mark_viewport_dirty()
+		mark_line_dirty(currentRow)
 	}
 }
 
@@ -217,5 +219,7 @@ func pull_state() {
 	// Pull from the top of the stack, replace the textBuffer with it
 	if len(undoStack.contents) > 0 {
 		textBuffer = undoStack.pop().([][]rune)
+		mark_viewport_dirty()
+		mark_line_dirty(currentRow)
 	}
 }

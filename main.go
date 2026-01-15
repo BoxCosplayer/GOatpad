@@ -37,6 +37,9 @@ var (
 
 	textBuffer = [][]rune{{}}
 	copyBuffer = CopyBuffer{[][]rune{{}}, ""}
+
+	dirtyRows     []bool
+	viewportDirty = true
 )
 
 func read_file(filename string) {
@@ -79,7 +82,10 @@ func read_file(filename string) {
 	}
 }
 
-func scroll_text_buffer() {
+func scroll_text_buffer() bool {
+	prevOffsetRow := offsetRow
+	prevOffsetCol := offsetCol
+
 	if currentRow < offsetRow {
 		offsetRow = currentRow
 	}
@@ -92,42 +98,69 @@ func scroll_text_buffer() {
 	if currentCol >= offsetCol+COLS {
 		offsetCol = currentCol - COLS + 1
 	}
+
+	return prevOffsetRow != offsetRow || prevOffsetCol != offsetCol
 }
 
 func display_text_buffer() {
-	var (
-		cursorRow int
-		cursorCol int
-	)
+	sync_dirty_rows()
+	forceRedraw := viewportDirty
 
 	// For every Character...
-	for cursorRow = 0; cursorRow < ROWS; cursorRow++ {
+	for cursorRow := 0; cursorRow < ROWS; cursorRow++ {
 		textBufferRow := cursorRow + offsetRow
+
+		drawRow := forceRedraw
+		if !drawRow && textBufferRow >= 0 && textBufferRow < len(textBuffer) {
+			drawRow = dirtyRows[textBufferRow]
+		}
+		if !drawRow {
+			continue
+		}
+
+		clear_screen_row(cursorRow)
 
 		// `writingCol` determines where to write to in the terminal
 		// `textBuffercol` determines which character to read (& pull from the buffer)
 		// `cursorCol` determines which character we are going to write
 		writingCol := 0
-		for cursorCol = 0; cursorCol < COLS; cursorCol++ {
-			textBufferCol := cursorCol + offsetCol
+		if textBufferRow >= 0 && textBufferRow < len(textBuffer) {
+			line := textBuffer[textBufferRow]
+			lineLen := len(line)
+			visibleCols := lineLen - offsetCol
+			if visibleCols < 0 {
+				visibleCols = 0
+			}
+			if visibleCols > COLS {
+				visibleCols = COLS
+			}
+			for cursorCol := 0; cursorCol < visibleCols; cursorCol++ {
+				textBufferCol := cursorCol + offsetCol
 
-			// Bound checking
-			if textBufferRow >= 0 && textBufferRow < len(textBuffer) &&
-				textBufferCol < len(textBuffer[textBufferRow]) {
 				// ...Print character to terminal
-				if textBuffer[textBufferRow][textBufferCol] != '\t' {
-					termbox.SetChar(writingCol, cursorRow, textBuffer[textBufferRow][textBufferCol])
+				if line[textBufferCol] != '\t' {
+					termbox.SetChar(writingCol, cursorRow, line[textBufferCol])
 					writingCol++
 				} else {
 					termbox.SetCell(writingCol, cursorRow, ' ', termbox.ColorDefault, termbox.ColorDefault)
 					writingCol++
 				}
-			} else if cursorRow+offsetRow > len(textBuffer)-1 {
-				// Indicate EoF
-				termbox.SetCell(0, cursorRow, rune('*'), termbox.ColorBlue, termbox.ColorDefault)
 			}
+			dirtyRows[textBufferRow] = false
+		} else if cursorRow+offsetRow > len(textBuffer)-1 {
+			// Indicate EoF
+			termbox.SetCell(0, cursorRow, rune('*'), termbox.ColorBlue, termbox.ColorDefault)
 		}
-		termbox.SetChar(cursorCol, cursorRow, rune('\n'))
+	}
+
+	if forceRedraw {
+		viewportDirty = false
+	}
+}
+
+func clear_screen_row(row int) {
+	for col := 0; col < COLS; col++ {
+		termbox.SetCell(col, row, ' ', termbox.ColorDefault, termbox.ColorDefault)
 	}
 }
 
@@ -219,17 +252,25 @@ func run_editor() {
 	for {
 
 		// -1 row for the status bar
-		COLS, ROWS = termbox.Size()
-		ROWS--
+		newCols, newRows := termbox.Size()
+		newRows--
 
 		// status bar errors is there is too little space
-		if COLS < 80 {
-			COLS = 80
+		if newCols < 80 {
+			newCols = 80
+		}
+
+		if newCols != COLS || newRows != ROWS {
+			COLS, ROWS = newCols, newRows
+			mark_viewport_dirty()
+		} else {
+			COLS, ROWS = newCols, newRows
 		}
 
 		// Empty the terminal, and show the template text
-		termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
-		scroll_text_buffer()
+		if scroll_text_buffer() {
+			mark_viewport_dirty()
+		}
 		display_text_buffer()
 		display_status_bar()
 
