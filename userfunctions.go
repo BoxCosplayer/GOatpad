@@ -11,9 +11,14 @@ func write_file(filename string, fileExtension string) {
 	file, err := os.Create(filename + fileExtension)
 	if err != nil {
 		fmt.Println(err)
+		return
 	}
 
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			fmt.Println(err)
+		}
+	}()
 
 	// Write each line to the file manually
 	// by ensuring to add newlines
@@ -30,7 +35,10 @@ func write_file(filename string, fileExtension string) {
 			fmt.Println("Error: ", err)
 		}
 
-		writer.Flush()
+		if err := writer.Flush(); err != nil {
+			fmt.Println("Error: ", err)
+			return
+		}
 		modified = false
 	}
 

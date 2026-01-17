@@ -113,7 +113,11 @@ func read_file(filename string) {
 
 	// `defer` delays the close until the end of function
 	// Close will always occur, after error handling to avoid null pointer references
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			fmt.Println(err)
+		}
+	}()
 
 	const textBufferMinCap = 64
 	if cap(textBuffer) < textBufferMinCap {
@@ -371,7 +375,9 @@ func run_editor() {
 
 		// Draw Cursor, and syncronise terminal
 		termbox.SetCursor(currentCol-offsetCol, currentRow-offsetRow)
-		termbox.Flush()
+		if err := termbox.Flush(); err != nil {
+			fmt.Println(err)
+		}
 
 		// Wait for an event
 		process_key()
