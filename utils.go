@@ -98,7 +98,7 @@ func find_current_block(counter int) (int, int) {
 		return last, last
 	}
 
-	openStack := make([]bracePos, 0, 8)
+	openStack := make([]position, 0, 8)
 
 	// Track unmatched opening braces up to the current row.
 	for row := 0; row <= currentRow; row++ {
@@ -106,7 +106,7 @@ func find_current_block(counter int) (int, int) {
 		for col, ch := range line {
 			switch ch {
 			case '{':
-				openStack = append(openStack, bracePos{row: row, col: col})
+				openStack = append(openStack, position{row: row, col: col})
 			case '}':
 				if len(openStack) > 0 {
 					openStack = openStack[:len(openStack)-1]

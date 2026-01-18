@@ -18,6 +18,9 @@ const (
 	TAB_WIDTH    int = 4
 	SCROLLMARGIN int = 5
 
+	RULER_COL int               = 80
+	RULER_BG  termbox.Attribute = termbox.ColorGreen
+
 	TOGGLE_MODE_KEY termbox.Key = termbox.KeyEsc
 
 	COPY_SYMBOL_KEY  rune = '1'
