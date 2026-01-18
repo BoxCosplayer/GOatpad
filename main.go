@@ -204,7 +204,16 @@ func draw_gutter(cursorRow int, textBufferRow int, lineNumWidth int, gutterWidth
 		return
 	}
 
-	num := strconv.Itoa(textBufferRow + 1)
+	displayNum := 0
+	if textBufferRow == currentRow {
+		displayNum = currentRow + 1
+	} else if textBufferRow < currentRow {
+		displayNum = currentRow - textBufferRow
+	} else {
+		displayNum = textBufferRow - currentRow
+	}
+
+	num := strconv.Itoa(displayNum)
 	col := lineNumWidth - len(num)
 	if col < 0 {
 		col = 0
@@ -217,7 +226,11 @@ func draw_gutter(cursorRow int, textBufferRow int, lineNumWidth int, gutterWidth
 		if col >= gutterWidth {
 			break
 		}
-		termbox.SetCell(col, cursorRow, ch, termbox.ColorMagenta, termbox.ColorDefault)
+		if textBufferRow == currentRow {
+			termbox.SetCell(col, cursorRow, ch, termbox.ColorCyan, termbox.ColorDefault)
+		} else {
+			termbox.SetCell(col, cursorRow, ch, termbox.ColorMagenta, termbox.ColorDefault)
+		}
 		col++
 	}
 }
