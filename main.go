@@ -165,14 +165,20 @@ func scroll_text_buffer() bool {
 	prevOffsetRow := offsetRow
 	prevOffsetCol := offsetCol
 
-	if currentRow < offsetRow {
-		offsetRow = currentRow
+	if currentRow < offsetRow+SCROLLMARGIN {
+		offsetRow = currentRow - SCROLLMARGIN
+	}
+	if offsetRow < 0 {
+		offsetRow = 0
 	}
 	if currentCol < offsetCol {
 		offsetCol = currentCol
 	}
-	if currentRow >= offsetRow+ROWS {
-		offsetRow = currentRow - ROWS + 1
+	if currentRow >= offsetRow+ROWS-SCROLLMARGIN {
+		offsetRow = currentRow - (ROWS - SCROLLMARGIN - 1)
+	}
+	if offsetRow < 0 {
+		offsetRow = 0
 	}
 
 	_, gutterWidth := line_number_gutter_width()
