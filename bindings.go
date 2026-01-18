@@ -245,9 +245,8 @@ func insert_line() {
 		currentCol = len(currentLine)
 	}
 
-	indentLimit := currentCol
 	indentLen := 0
-	for indentLen < indentLimit {
+	for indentLen < currentCol {
 		ch := currentLine[indentLen]
 		if ch != ' ' && ch != '\t' {
 			break
@@ -255,15 +254,27 @@ func insert_line() {
 		indentLen++
 	}
 
-	newLine := make([]rune, indentLen+len(currentLine)-currentCol)
+	extraIndent := 0
+	if currentCol == len(currentLine) && len(currentLine) > 0 {
+		switch currentLine[len(currentLine)-1] {
+		case '(', '{', '[', ':':
+			extraIndent = TAB_WIDTH
+		}
+	}
+
+	newIndentLen := indentLen + extraIndent
+	newLine := make([]rune, newIndentLen+len(currentLine)-currentCol)
 	copy(newLine[:indentLen], currentLine[:indentLen])
-	copy(newLine[indentLen:], currentLine[currentCol:])
+	if extraIndent > 0 {
+		copy(newLine[indentLen:newIndentLen], tabExpansion)
+	}
+	copy(newLine[newIndentLen:], currentLine[currentCol:])
 
 	textBuffer[currentRow] = currentLine[:currentCol]
 	textBuffer = append(textBuffer[:currentRow+1], append([][]rune{newLine}, textBuffer[currentRow+1:]...)...)
 
 	currentRow++
-	currentCol = indentLen
+	currentCol = newIndentLen
 
 	mark_viewport_dirty()
 	mark_line_dirty(currentRow)
