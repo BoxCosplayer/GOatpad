@@ -44,22 +44,6 @@ func write_file(filename string, fileExtension string) {
 
 }
 
-func insert_line() {
-
-	// Create a new line, and wrap the remainder of the current line onto the next one
-	newLine := make([]rune, len(textBuffer[currentRow])-currentCol)
-	copy(newLine, textBuffer[currentRow][currentCol:])
-
-	textBuffer[currentRow] = textBuffer[currentRow][:currentCol]
-	textBuffer = append(textBuffer[:currentRow+1], append([][]rune{newLine}, textBuffer[currentRow+1:]...)...)
-
-	currentRow++
-	currentCol = 0
-
-	mark_viewport_dirty()
-	mark_line_dirty(currentRow)
-}
-
 // ---------- Symbol Copying ----------
 
 func copy_symbol() {

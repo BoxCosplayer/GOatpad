@@ -201,7 +201,7 @@ func process_key() {
 			case termbox.KeySpace:
 				insert_rune(keyEvent)
 			case termbox.KeyTab:
-				for i := 0; i <= 4; i++ {
+				for i := 0; i < TAB_WIDTH; i++ {
 					insert_rune(keyEvent)
 				}
 
@@ -235,6 +235,38 @@ func switch_mode(modeInp string) {
 	case "Toggle":
 		mode = (mode + 1) % MAX_MODES
 	}
+}
+
+func insert_line() {
+
+	// Create a new line, and wrap the remainder of the current line onto the next one
+	currentLine := textBuffer[currentRow]
+	if currentCol > len(currentLine) {
+		currentCol = len(currentLine)
+	}
+
+	indentLimit := currentCol
+	indentLen := 0
+	for indentLen < indentLimit {
+		ch := currentLine[indentLen]
+		if ch != ' ' && ch != '\t' {
+			break
+		}
+		indentLen++
+	}
+
+	newLine := make([]rune, indentLen+len(currentLine)-currentCol)
+	copy(newLine[:indentLen], currentLine[:indentLen])
+	copy(newLine[indentLen:], currentLine[currentCol:])
+
+	textBuffer[currentRow] = currentLine[:currentCol]
+	textBuffer = append(textBuffer[:currentRow+1], append([][]rune{newLine}, textBuffer[currentRow+1:]...)...)
+
+	currentRow++
+	currentCol = indentLen
+
+	mark_viewport_dirty()
+	mark_line_dirty(currentRow)
 }
 
 func insert_rune(event termbox.Event) {
