@@ -24,6 +24,19 @@ func process_key() {
 	keyEvent := get_key()
 	prevRow := currentRow
 
+	if mode == 0 && jumpPending {
+		if keyEvent.Ch >= '0' && keyEvent.Ch <= '9' {
+			if handle_jump_digit(keyEvent.Ch) {
+				if currentRow != prevRow {
+					mark_viewport_dirty()
+				}
+				return
+			}
+		} else {
+			reset_jump_state()
+		}
+	}
+
 	// Binds that happen regardless of mode
 	switch keyEvent.Key {
 
@@ -72,40 +85,7 @@ func process_key() {
 			// Printable Character Pressed
 			switch keyEvent.Ch {
 
-			// ---------- Cursor movement ----------
-
-			// Cursor Left
-			case CURSOR_LEFT:
-				if currentCol != 0 {
-					currentCol--
-				} else if currentRow > 0 {
-					currentRow--
-					currentCol = len(textBuffer[currentRow])
-				}
-
-			// Cursor down
-			case CURSOR_DOWN:
-				if currentRow < len(textBuffer)-1 {
-					currentRow++
-				}
-
-			// Cursor Up
-			case CURSOR_UP:
-				if currentRow != 0 {
-					currentRow--
-				}
-
-			// Cursor Right
-			case CURSOR_RIGHT:
-				if currentCol < len(textBuffer[currentRow]) {
-					currentCol++
-				} else if currentRow < len(textBuffer)-1 {
-					currentRow++
-					currentCol = 0
-				}
-
-			// ---------- Program Saving ----------
-
+			// Controls
 			// Exit program with saving
 			case QUIT_SAVE:
 				write_file(filename, fileExtension)
@@ -117,63 +97,76 @@ func process_key() {
 				termbox.Close()
 				os.Exit(0)
 
+			// Navigation
+			case CURSOR_LEFT:
+				if currentCol != 0 {
+					currentCol--
+				} else if currentRow > 0 {
+					currentRow--
+					currentCol = len(textBuffer[currentRow])
+				}
+
+			case CURSOR_DOWN:
+				if currentRow < len(textBuffer)-1 {
+					currentRow++
+				}
+
+			case CURSOR_UP:
+				if currentRow != 0 {
+					currentRow--
+				}
+
+			case CURSOR_RIGHT:
+				if currentCol < len(textBuffer[currentRow]) {
+					currentCol++
+				} else if currentRow < len(textBuffer)-1 {
+					currentRow++
+					currentCol = 0
+				}
+
+			case JUMP_UP:
+				jump_up()
+
+			case JUMP_DOWN:
+				jump_down()
+
 			// ---------- Copy/Paste ----------
 
-			// copy line
+			// Symbol Controls
 			case COPY_SYMBOL_KEY:
 				copy_symbol()
-
-			// cut line
 			case CUT_SYMBOL_KEY:
 				cut_symbol()
-
-			// paste line
 			case PASTE_SYMBOL_KEY:
 				paste_symbol()
-
-			// delete line
 			case DEL_SYMBOL_KEY:
 				delete_symbol()
 
-			// copy line
+			// Line Controls
 			case COPY_LINE_KEY:
 				copy_line()
-
-			// cut line
 			case CUT_LINE_KEY:
 				cut_line()
-
-			// paste line
 			case PASTE_LINE_KEY:
 				paste_line()
-
-			// delete line
 			case DEL_LINE_KEY:
 				delete_line()
 
-			// copy line
+			// Block Controls
 			case COPY_BLOCK_KEY:
 				copy_block()
-
-			// cut line
 			case CUT_BLOCK_KEY:
 				cut_block()
-
-			// paste line
 			case PASTE_BLOCK_KEY:
 				paste_block()
-
-			// delete line
 			case DEL_BLOCK_KEY:
 				delete_block()
 
-			// ---------- Undo/Redo ----------
-
-			// save state
+			// Save state (push state onto stack)
 			case MANUAL_SAVE_STATE:
 				push_state()
 
-			// rollback state
+			// Rollback state (pop state from stack)
 			case ROLLBACK_STATE:
 				pull_state()
 			}
@@ -230,10 +223,14 @@ func switch_mode(modeInp string) {
 		mode = 0
 	case "Insert":
 		mode = 1
+		reset_jump_state()
 
 	// toggle cycles every mode
 	case "Toggle":
 		mode = (mode + 1) % MAX_MODES
+		if mode != 0 {
+			reset_jump_state()
+		}
 	}
 }
 
@@ -379,4 +376,60 @@ func delete_rune(event termbox.Event) {
 		mark_viewport_dirty()
 	}
 	mark_line_dirty(currentRow)
+}
+
+func jump_up() {
+	start_jump(-1)
+}
+
+func jump_down() {
+	start_jump(1)
+}
+
+func start_jump(direction int) {
+	jumpPending = true
+	jumpDirection = direction
+	jumpDigitsCount = 0
+	jumpValue = 0
+}
+
+func reset_jump_state() {
+	jumpPending = false
+	jumpDirection = 0
+	jumpDigitsCount = 0
+	jumpValue = 0
+}
+
+func handle_jump_digit(ch rune) bool {
+	if !jumpPending {
+		return false
+	}
+	if ch < '0' || ch > '9' {
+		return false
+	}
+
+	jumpValue = jumpValue*10 + int(ch-'0')
+	jumpDigitsCount++
+	if jumpDigitsCount < 2 {
+		return true
+	}
+
+	apply_jump(jumpDirection * jumpValue)
+	reset_jump_state()
+	return true
+}
+
+func apply_jump(delta int) {
+	if len(textBuffer) == 0 {
+		currentRow = 0
+		return
+	}
+	currentCol = 0
+	target := currentRow + delta
+	if target < 0 {
+		target = 0
+	} else if target >= len(textBuffer) {
+		target = len(textBuffer) - 1
+	}
+	currentRow = target
 }
