@@ -25,15 +25,11 @@ func process_key() {
 	prevRow := currentRow
 
 	if mode == 0 && jumpPending {
-		if keyEvent.Ch >= '0' && keyEvent.Ch <= '9' {
-			if handle_jump_digit(keyEvent.Ch) {
-				if currentRow != prevRow {
-					mark_viewport_dirty()
-				}
-				return
+		if handle_jump_digit(keyEvent.Ch) {
+			if currentRow != prevRow {
+				mark_viewport_dirty()
 			}
-		} else {
-			reset_jump_state()
+			return
 		}
 	}
 
@@ -405,12 +401,23 @@ func handle_jump_digit(ch rune) bool {
 		return false
 	}
 	if ch < '0' || ch > '9' {
-		return false
+		if ch == JUMP_UP && jumpDirection == -1 {
+			currentCol = 0
+			currentRow = 0
+			reset_jump_state()
+		} else if ch == JUMP_DOWN && jumpDirection == 1 {
+			currentCol = 0
+			currentRow = len(textBuffer) - 1
+			reset_jump_state()
+		} else {
+			return false
+		}
+		return true
 	}
 
 	jumpValue = jumpValue*10 + int(ch-'0')
 	jumpDigitsCount++
-	if jumpDigitsCount < 2 {
+	if jumpDigitsCount < 3 {
 		return true
 	}
 
