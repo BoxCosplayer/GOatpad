@@ -183,8 +183,8 @@ func scroll_text_buffer() bool {
 
 	_, gutterWidth := line_number_gutter_width()
 	textCols := COLS - gutterWidth
-	if textCols < 1 {
-		textCols = 1
+	if textCols < 0 {
+		textCols = 0
 	}
 	if currentCol >= offsetCol+textCols {
 		offsetCol = currentCol - textCols + 1
