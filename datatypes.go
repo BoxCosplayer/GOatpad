@@ -1,5 +1,9 @@
 package main
 
+import (
+	termbox "github.com/nsf/termbox-go"
+)
+
 type stack struct {
 	// array of any type
 	contents []interface{}
@@ -27,8 +31,38 @@ type CopyBuffer struct {
 	bufferType string
 }
 
-// bracePos tracks an opening brace position in the text buffer.
-type bracePos struct {
+// position tracks any position in the text buffer.
+type position struct {
 	row int
 	col int
+}
+
+type rulerState struct {
+	enabled bool
+	col     int
+}
+
+func new_ruler_state() rulerState {
+	if RULER_COL <= 0 {
+		return rulerState{enabled: false, col: -1}
+	}
+	return rulerState{enabled: true, col: RULER_COL - 1}
+}
+
+func (r rulerState) highlight(textBufferCol int) bool {
+	return r.enabled && textBufferCol == r.col
+}
+
+func (r rulerState) draw_for_short_line(cursorRow int, lineLen int, textCols int, gutterWidth int, offsetCol int) {
+	if !r.enabled || textCols <= 0 || r.col < lineLen {
+		return
+	}
+	if r.col < offsetCol || r.col >= offsetCol+textCols {
+		return
+	}
+	rulerScreenCol := gutterWidth + (r.col - offsetCol)
+	if rulerScreenCol < gutterWidth || rulerScreenCol >= COLS {
+		return
+	}
+	termbox.SetCell(rulerScreenCol, cursorRow, ' ', termbox.ColorDefault, RULER_BG)
 }

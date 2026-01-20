@@ -249,6 +249,7 @@ func display_text_buffer() {
 	if textCols < 0 {
 		textCols = 0
 	}
+	ruler := new_ruler_state()
 
 	// For every Character...
 	for cursorRow := 0; cursorRow < ROWS; cursorRow++ {
@@ -281,16 +282,26 @@ func display_text_buffer() {
 			}
 			for cursorCol := 0; cursorCol < visibleCols; cursorCol++ {
 				textBufferCol := cursorCol + offsetCol
+				useRulerHighlight := ruler.highlight(textBufferCol)
 
 				// ...Print character to terminal
 				if line[textBufferCol] != '\t' {
-					termbox.SetChar(writingCol, cursorRow, line[textBufferCol])
+					if useRulerHighlight {
+						termbox.SetCell(writingCol, cursorRow, line[textBufferCol], termbox.ColorDefault, RULER_BG)
+					} else {
+						termbox.SetChar(writingCol, cursorRow, line[textBufferCol])
+					}
 					writingCol++
 				} else {
-					termbox.SetCell(writingCol, cursorRow, ' ', termbox.ColorDefault, termbox.ColorDefault)
+					if useRulerHighlight {
+						termbox.SetCell(writingCol, cursorRow, ' ', termbox.ColorDefault, RULER_BG)
+					} else {
+						termbox.SetCell(writingCol, cursorRow, ' ', termbox.ColorDefault, termbox.ColorDefault)
+					}
 					writingCol++
 				}
 			}
+			ruler.draw_for_short_line(cursorRow, lineLen, textCols, gutterWidth, offsetCol)
 			dirtyRows[textBufferRow] = false
 		} else if cursorRow+offsetRow > len(textBuffer)-1 {
 			// Indicate EoF
