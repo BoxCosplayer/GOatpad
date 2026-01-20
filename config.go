@@ -22,12 +22,16 @@ const (
 
 // Navigation
 const (
-	CURSOR_LEFT  rune = 'j'
-	CURSOR_DOWN  rune = 'k'
-	CURSOR_UP    rune = 'l'
-	CURSOR_RIGHT rune = ';'
-	JUMP_UP      rune = 'g'
-	JUMP_DOWN    rune = 'h'
+	CURSOR_LEFT   rune        = 'j'
+	CURSOR_DOWN   rune        = 'k'
+	CURSOR_UP     rune        = 'l'
+	CURSOR_RIGHT  rune        = ';'
+	JUMP_UP       rune        = 'g'
+	JUMP_DOWN     rune        = 'h'
+	PAGE_UP       termbox.Key = termbox.KeyPgup
+	PAGE_DOWN     termbox.Key = termbox.KeyPgdn
+	START_OF_LINE termbox.Key = termbox.KeyHome
+	END_OF_LINE   termbox.Key = termbox.KeyEnd
 )
 
 // Copy-Paste

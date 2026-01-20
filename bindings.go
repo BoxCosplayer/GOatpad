@@ -36,25 +36,24 @@ func process_key() {
 	// Binds that happen regardless of mode
 	switch keyEvent.Key {
 
+	// Controls
 	case TOGGLE_MODE_KEY:
 		switch_mode("Toggle")
 
 	case termbox.KeyCtrlS:
 		write_file(filename, fileExtension)
 
-	// cursor up
+	// Special Key Navigation
 	case termbox.KeyArrowUp:
 		if currentRow != 0 {
 			currentRow--
 		}
 
-	// cursor down
 	case termbox.KeyArrowDown:
 		if currentRow < len(textBuffer)-1 {
 			currentRow++
 		}
 
-	// cursor left
 	case termbox.KeyArrowLeft:
 		if currentCol != 0 {
 			currentCol--
@@ -63,7 +62,6 @@ func process_key() {
 			currentCol = len(textBuffer[currentRow])
 		}
 
-	// cursor right
 	case termbox.KeyArrowRight:
 		if currentCol < len(textBuffer[currentRow]) {
 			currentCol++
@@ -71,6 +69,27 @@ func process_key() {
 			currentRow++
 			currentCol = 0
 		}
+
+	case PAGE_UP:
+		page_up()
+
+	case PAGE_DOWN:
+		page_down()
+
+	case START_OF_LINE:
+		// move cursor to first non-whitespace character of line
+		currentLine := textBuffer[currentRow]
+		currentCol = len(currentLine)
+		for i, ch := range currentLine {
+			if ch != ' ' && ch != '\t' {
+				currentCol = i
+				break
+			}
+		}
+
+	case END_OF_LINE:
+		// move cursor to last character of line (even if it it is whitespace)
+		currentCol = len(textBuffer[currentRow])
 	}
 
 	// First, check the mode.
@@ -171,12 +190,10 @@ func process_key() {
 			if currentCol > len(textBuffer[currentRow]) {
 				currentCol = len(textBuffer[currentRow])
 			}
+		} else {
+			switch keyEvent.Key {
+			}
 		}
-		// } else {
-		// 	// Special Character Pressed
-		// 	switch keyEvent.Key {
-		// 	}
-		// }
 
 	// case [EDIT] mode
 	case 1:
@@ -210,23 +227,6 @@ func process_key() {
 
 	if currentRow != prevRow {
 		mark_viewport_dirty()
-	}
-}
-
-func switch_mode(modeInp string) {
-	switch modeInp {
-	case "View":
-		mode = 0
-	case "Insert":
-		mode = 1
-		reset_jump_state()
-
-	// toggle cycles every mode
-	case "Toggle":
-		mode = (mode + 1) % MAX_MODES
-		if mode != 0 {
-			reset_jump_state()
-		}
 	}
 }
 
@@ -372,73 +372,4 @@ func delete_rune(event termbox.Event) {
 		mark_viewport_dirty()
 	}
 	mark_line_dirty(currentRow)
-}
-
-func jump_up() {
-	start_jump(-1)
-}
-
-func jump_down() {
-	start_jump(1)
-}
-
-func start_jump(direction int) {
-	jumpPending = true
-	jumpDirection = direction
-	jumpDigitsCount = 0
-	jumpValue = 0
-}
-
-func reset_jump_state() {
-	jumpPending = false
-	jumpDirection = 0
-	jumpDigitsCount = 0
-	jumpValue = 0
-}
-
-func handle_jump_digit(ch rune) bool {
-	if !jumpPending {
-		return false
-	}
-	if ch < '0' || ch > '9' {
-		if ch == JUMP_UP && jumpDirection == -1 {
-			currentCol = 0
-			currentRow = 0
-			reset_jump_state()
-			return true
-		} else if ch == JUMP_DOWN && jumpDirection == 1 {
-			currentCol = 0
-			currentRow = len(textBuffer) - 1
-			reset_jump_state()
-			return true
-		} else {
-			reset_jump_state()
-			return false
-		}
-	}
-
-	jumpValue = jumpValue*10 + int(ch-'0')
-	jumpDigitsCount++
-	if jumpDigitsCount < 3 {
-		return true
-	}
-
-	apply_jump(jumpDirection * jumpValue)
-	reset_jump_state()
-	return true
-}
-
-func apply_jump(delta int) {
-	if len(textBuffer) == 0 {
-		currentRow = 0
-		return
-	}
-	currentCol = 0
-	target := currentRow + delta
-	if target < 0 {
-		target = 0
-	} else if target >= len(textBuffer) {
-		target = len(textBuffer) - 1
-	}
-	currentRow = target
 }

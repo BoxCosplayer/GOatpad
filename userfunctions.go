@@ -6,6 +6,24 @@ import (
 	"os"
 )
 
+// ---------- Controls ----------
+func switch_mode(modeInp string) {
+	switch modeInp {
+	case "View":
+		mode = 0
+	case "Insert":
+		mode = 1
+		reset_jump_state()
+
+	// toggle cycles every mode
+	case "Toggle":
+		mode = (mode + 1) % MAX_MODES
+		if mode != 0 {
+			reset_jump_state()
+		}
+	}
+}
+
 func write_file(filename string, fileExtension string) {
 	// Create or open the 'filename.extension'
 	file, err := os.Create(filename + fileExtension)
@@ -42,6 +60,66 @@ func write_file(filename string, fileExtension string) {
 		modified = false
 	}
 
+}
+
+// ---------- Navigation ----------
+
+func page_up() {
+	if len(textBuffer) == 0 || ROWS <= 0 {
+		currentRow = 0
+		offsetRow = 0
+		return
+	}
+
+	// Keep the cursor on the same screen row when possible.
+	screenRow := currentRow - offsetRow
+	if screenRow < 0 {
+		screenRow = 0
+	} else if screenRow >= ROWS {
+		screenRow = ROWS - 1
+	}
+
+	targetRow := currentRow - ROWS
+	if targetRow < 0 {
+		targetRow = 0
+	}
+
+	currentRow = targetRow
+	offsetRow = currentRow - screenRow
+	if offsetRow < 0 {
+		offsetRow = 0
+	}
+}
+
+func page_down() {
+	if len(textBuffer) == 0 || ROWS <= 0 {
+		currentRow = 0
+		offsetRow = 0
+		return
+	}
+
+	// Keep the cursor on the same screen row when possible.
+	screenRow := currentRow - offsetRow
+	if screenRow < 0 {
+		screenRow = 0
+	} else if screenRow >= ROWS {
+		screenRow = ROWS - 1
+	}
+
+	maxRow := len(textBuffer) - 1
+	if maxRow < 0 {
+		maxRow = 0
+	}
+	targetRow := currentRow + ROWS
+	if targetRow > maxRow {
+		targetRow = maxRow
+	}
+
+	currentRow = targetRow
+	offsetRow = currentRow - screenRow
+	if offsetRow < 0 {
+		offsetRow = 0
+	}
 }
 
 // ---------- Symbol Copying ----------
@@ -214,4 +292,74 @@ func pull_state() {
 		mark_viewport_dirty()
 		mark_line_dirty(currentRow)
 	}
+}
+
+// ---------- Jumping ----------
+func jump_up() {
+	start_jump(-1)
+}
+
+func jump_down() {
+	start_jump(1)
+}
+
+func start_jump(direction int) {
+	jumpPending = true
+	jumpDirection = direction
+	jumpDigitsCount = 0
+	jumpValue = 0
+}
+
+func reset_jump_state() {
+	jumpPending = false
+	jumpDirection = 0
+	jumpDigitsCount = 0
+	jumpValue = 0
+}
+
+func handle_jump_digit(ch rune) bool {
+	if !jumpPending {
+		return false
+	}
+	if ch < '0' || ch > '9' {
+		if ch == JUMP_UP && jumpDirection == -1 {
+			currentCol = 0
+			currentRow = 0
+			reset_jump_state()
+			return true
+		} else if ch == JUMP_DOWN && jumpDirection == 1 {
+			currentCol = 0
+			currentRow = len(textBuffer) - 1
+			reset_jump_state()
+			return true
+		} else {
+			reset_jump_state()
+			return false
+		}
+	}
+
+	jumpValue = jumpValue*10 + int(ch-'0')
+	jumpDigitsCount++
+	if jumpDigitsCount < 3 {
+		return true
+	}
+
+	apply_jump(jumpDirection * jumpValue)
+	reset_jump_state()
+	return true
+}
+
+func apply_jump(delta int) {
+	if len(textBuffer) == 0 {
+		currentRow = 0
+		return
+	}
+	currentCol = 0
+	target := currentRow + delta
+	if target < 0 {
+		target = 0
+	} else if target >= len(textBuffer) {
+		target = len(textBuffer) - 1
+	}
+	currentRow = target
 }
