@@ -165,25 +165,90 @@ func scroll_text_buffer() bool {
 	prevOffsetRow := offsetRow
 	prevOffsetCol := offsetCol
 
-	if currentRow < offsetRow {
-		offsetRow = currentRow
+	if currentRow < offsetRow+SCROLLMARGIN {
+		offsetRow = currentRow - SCROLLMARGIN
+	}
+	if offsetRow < 0 {
+		offsetRow = 0
 	}
 	if currentCol < offsetCol {
 		offsetCol = currentCol
 	}
-	if currentRow >= offsetRow+ROWS {
-		offsetRow = currentRow - ROWS + 1
+	if currentRow >= offsetRow+ROWS-SCROLLMARGIN {
+		offsetRow = currentRow - (ROWS - SCROLLMARGIN - 1)
 	}
-	if currentCol >= offsetCol+COLS {
-		offsetCol = currentCol - COLS + 1
+	if offsetRow < 0 {
+		offsetRow = 0
+	}
+
+	_, gutterWidth := line_number_gutter_width()
+	textCols := COLS - gutterWidth
+	if textCols < 0 {
+		textCols = 0
+	}
+	if currentCol >= offsetCol+textCols {
+		offsetCol = currentCol - textCols + 1
 	}
 
 	return prevOffsetRow != offsetRow || prevOffsetCol != offsetCol
 }
 
+func line_number_gutter_width() (int, int) {
+	lineNumWidth := len(strconv.Itoa(len(textBuffer)))
+	gutterWidth := lineNumWidth + 1
+	if gutterWidth > COLS {
+		gutterWidth = COLS
+	}
+	return lineNumWidth, gutterWidth
+}
+
+func draw_gutter(cursorRow int, textBufferRow int, lineNumWidth int, gutterWidth int) {
+	if gutterWidth <= 0 {
+		return
+	}
+	if textBufferRow < 0 || textBufferRow >= len(textBuffer) {
+		return
+	}
+
+	displayNum := 0
+	if textBufferRow == currentRow {
+		displayNum = currentRow + 1
+	} else if textBufferRow < currentRow {
+		displayNum = currentRow - textBufferRow
+	} else {
+		displayNum = textBufferRow - currentRow
+	}
+
+	num := strconv.Itoa(displayNum)
+	col := lineNumWidth - len(num)
+	if col < 0 {
+		col = 0
+	}
+	if col >= gutterWidth {
+		return
+	}
+
+	for _, ch := range num {
+		if col >= gutterWidth {
+			break
+		}
+		if textBufferRow == currentRow {
+			termbox.SetCell(col, cursorRow, ch, termbox.ColorCyan, termbox.ColorDefault)
+		} else {
+			termbox.SetCell(col, cursorRow, ch, termbox.ColorMagenta, termbox.ColorDefault)
+		}
+		col++
+	}
+}
+
 func display_text_buffer() {
 	sync_dirty_rows()
 	forceRedraw := viewportDirty
+	lineNumWidth, gutterWidth := line_number_gutter_width()
+	textCols := COLS - gutterWidth
+	if textCols < 0 {
+		textCols = 0
+	}
 
 	// For every Character...
 	for cursorRow := 0; cursorRow < ROWS; cursorRow++ {
@@ -198,11 +263,12 @@ func display_text_buffer() {
 		}
 
 		clear_screen_row(cursorRow)
+		draw_gutter(cursorRow, textBufferRow, lineNumWidth, gutterWidth)
 
 		// `writingCol` determines where to write to in the terminal
 		// `textBuffercol` determines which character to read (& pull from the buffer)
 		// `cursorCol` determines which character we are going to write
-		writingCol := 0
+		writingCol := gutterWidth
 		if textBufferRow >= 0 && textBufferRow < len(textBuffer) {
 			line := textBuffer[textBufferRow]
 			lineLen := len(line)
@@ -210,8 +276,8 @@ func display_text_buffer() {
 			if visibleCols < 0 {
 				visibleCols = 0
 			}
-			if visibleCols > COLS {
-				visibleCols = COLS
+			if visibleCols > textCols {
+				visibleCols = textCols
 			}
 			for cursorCol := 0; cursorCol < visibleCols; cursorCol++ {
 				textBufferCol := cursorCol + offsetCol
@@ -228,7 +294,9 @@ func display_text_buffer() {
 			dirtyRows[textBufferRow] = false
 		} else if cursorRow+offsetRow > len(textBuffer)-1 {
 			// Indicate EoF
-			termbox.SetCell(0, cursorRow, rune('*'), termbox.ColorBlue, termbox.ColorDefault)
+			if gutterWidth < COLS {
+				termbox.SetCell(gutterWidth, cursorRow, rune('*'), termbox.ColorBlue, termbox.ColorDefault)
+			}
 		}
 	}
 
@@ -374,7 +442,8 @@ func run_editor() {
 		display_status_bar()
 
 		// Draw Cursor, and syncronise terminal
-		termbox.SetCursor(currentCol-offsetCol, currentRow-offsetRow)
+		_, gutterWidth := line_number_gutter_width()
+		termbox.SetCursor(currentCol-offsetCol+gutterWidth, currentRow-offsetRow)
 		if err := termbox.Flush(); err != nil {
 			fmt.Println(err)
 		}

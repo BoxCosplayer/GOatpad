@@ -15,7 +15,8 @@ const (
 	QUIT_SAVE   rune        = 'x'
 	SAVE_NOQUIT termbox.Key = termbox.KeyCtrlS
 
-	TAB_WIDTH int = 4
+	TAB_WIDTH    int = 4
+	SCROLLMARGIN int = 5
 
 	TOGGLE_MODE_KEY termbox.Key = termbox.KeyEsc
 

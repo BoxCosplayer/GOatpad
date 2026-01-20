@@ -22,6 +22,7 @@ func get_key() termbox.Event {
 
 func process_key() {
 	keyEvent := get_key()
+	prevRow := currentRow
 
 	// Binds that happen regardless of mode
 	switch keyEvent.Key {
@@ -216,6 +217,10 @@ func process_key() {
 
 			}
 		}
+	}
+
+	if currentRow != prevRow {
+		mark_viewport_dirty()
 	}
 }
 
