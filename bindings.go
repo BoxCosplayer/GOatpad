@@ -24,28 +24,36 @@ func process_key() {
 	keyEvent := get_key()
 	prevRow := currentRow
 
+	if mode == 0 && jumpPending {
+		if handle_jump_digit(keyEvent.Ch) {
+			if currentRow != prevRow {
+				mark_viewport_dirty()
+			}
+			return
+		}
+	}
+
 	// Binds that happen regardless of mode
 	switch keyEvent.Key {
 
+	// Controls
 	case TOGGLE_MODE_KEY:
 		switch_mode("Toggle")
 
 	case termbox.KeyCtrlS:
 		write_file(filename, fileExtension)
 
-	// cursor up
+	// Special Key Navigation
 	case termbox.KeyArrowUp:
 		if currentRow != 0 {
 			currentRow--
 		}
 
-	// cursor down
 	case termbox.KeyArrowDown:
 		if currentRow < len(textBuffer)-1 {
 			currentRow++
 		}
 
-	// cursor left
 	case termbox.KeyArrowLeft:
 		if currentCol != 0 {
 			currentCol--
@@ -54,7 +62,6 @@ func process_key() {
 			currentCol = len(textBuffer[currentRow])
 		}
 
-	// cursor right
 	case termbox.KeyArrowRight:
 		if currentCol < len(textBuffer[currentRow]) {
 			currentCol++
@@ -62,6 +69,27 @@ func process_key() {
 			currentRow++
 			currentCol = 0
 		}
+
+	case PAGE_UP:
+		page_up()
+
+	case PAGE_DOWN:
+		page_down()
+
+	case START_OF_LINE:
+		// move cursor to first non-whitespace character of line
+		currentLine := textBuffer[currentRow]
+		currentCol = len(currentLine)
+		for i, ch := range currentLine {
+			if ch != ' ' && ch != '\t' {
+				currentCol = i
+				break
+			}
+		}
+
+	case END_OF_LINE:
+		// move cursor to last character of line (even if it it is whitespace)
+		currentCol = len(textBuffer[currentRow])
 	}
 
 	// First, check the mode.
@@ -72,40 +100,7 @@ func process_key() {
 			// Printable Character Pressed
 			switch keyEvent.Ch {
 
-			// ---------- Cursor movement ----------
-
-			// Cursor Left
-			case CURSOR_LEFT:
-				if currentCol != 0 {
-					currentCol--
-				} else if currentRow > 0 {
-					currentRow--
-					currentCol = len(textBuffer[currentRow])
-				}
-
-			// Cursor down
-			case CURSOR_DOWN:
-				if currentRow < len(textBuffer)-1 {
-					currentRow++
-				}
-
-			// Cursor Up
-			case CURSOR_UP:
-				if currentRow != 0 {
-					currentRow--
-				}
-
-			// Cursor Right
-			case CURSOR_RIGHT:
-				if currentCol < len(textBuffer[currentRow]) {
-					currentCol++
-				} else if currentRow < len(textBuffer)-1 {
-					currentRow++
-					currentCol = 0
-				}
-
-			// ---------- Program Saving ----------
-
+			// Controls
 			// Exit program with saving
 			case QUIT_SAVE:
 				write_file(filename, fileExtension)
@@ -117,63 +112,76 @@ func process_key() {
 				termbox.Close()
 				os.Exit(0)
 
+			// Navigation
+			case CURSOR_LEFT:
+				if currentCol != 0 {
+					currentCol--
+				} else if currentRow > 0 {
+					currentRow--
+					currentCol = len(textBuffer[currentRow])
+				}
+
+			case CURSOR_DOWN:
+				if currentRow < len(textBuffer)-1 {
+					currentRow++
+				}
+
+			case CURSOR_UP:
+				if currentRow != 0 {
+					currentRow--
+				}
+
+			case CURSOR_RIGHT:
+				if currentCol < len(textBuffer[currentRow]) {
+					currentCol++
+				} else if currentRow < len(textBuffer)-1 {
+					currentRow++
+					currentCol = 0
+				}
+
+			case JUMP_UP:
+				jump_up()
+
+			case JUMP_DOWN:
+				jump_down()
+
 			// ---------- Copy/Paste ----------
 
-			// copy line
+			// Symbol Controls
 			case COPY_SYMBOL_KEY:
 				copy_symbol()
-
-			// cut line
 			case CUT_SYMBOL_KEY:
 				cut_symbol()
-
-			// paste line
 			case PASTE_SYMBOL_KEY:
 				paste_symbol()
-
-			// delete line
 			case DEL_SYMBOL_KEY:
 				delete_symbol()
 
-			// copy line
+			// Line Controls
 			case COPY_LINE_KEY:
 				copy_line()
-
-			// cut line
 			case CUT_LINE_KEY:
 				cut_line()
-
-			// paste line
 			case PASTE_LINE_KEY:
 				paste_line()
-
-			// delete line
 			case DEL_LINE_KEY:
 				delete_line()
 
-			// copy line
+			// Block Controls
 			case COPY_BLOCK_KEY:
 				copy_block()
-
-			// cut line
 			case CUT_BLOCK_KEY:
 				cut_block()
-
-			// paste line
 			case PASTE_BLOCK_KEY:
 				paste_block()
-
-			// delete line
 			case DEL_BLOCK_KEY:
 				delete_block()
 
-			// ---------- Undo/Redo ----------
-
-			// save state
+			// Save state (push state onto stack)
 			case MANUAL_SAVE_STATE:
 				push_state()
 
-			// rollback state
+			// Rollback state (pop state from stack)
 			case ROLLBACK_STATE:
 				pull_state()
 			}
@@ -182,12 +190,10 @@ func process_key() {
 			if currentCol > len(textBuffer[currentRow]) {
 				currentCol = len(textBuffer[currentRow])
 			}
+		} else {
+			switch keyEvent.Key {
+			}
 		}
-		// } else {
-		// 	// Special Character Pressed
-		// 	switch keyEvent.Key {
-		// 	}
-		// }
 
 	// case [EDIT] mode
 	case 1:
@@ -221,19 +227,6 @@ func process_key() {
 
 	if currentRow != prevRow {
 		mark_viewport_dirty()
-	}
-}
-
-func switch_mode(modeInp string) {
-	switch modeInp {
-	case "View":
-		mode = 0
-	case "Insert":
-		mode = 1
-
-	// toggle cycles every mode
-	case "Toggle":
-		mode = (mode + 1) % MAX_MODES
 	}
 }
 

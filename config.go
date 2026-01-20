@@ -2,27 +2,40 @@ package main
 
 import "github.com/nsf/termbox-go"
 
-// View mode binds
 // Case sensitive
+
+// Preferences
 const (
-	CURSOR_LEFT  rune = 'h'
-	CURSOR_DOWN  rune = 'j'
-	CURSOR_UP    rune = 'k'
-	CURSOR_RIGHT rune = 'l'
-	// alternatively use arrow keys
+	TAB_WIDTH    int               = 4
+	SCROLLMARGIN int               = 5
+	RULER_COL    int               = 80
+	RULER_BG     termbox.Attribute = termbox.ColorGreen
+)
 
-	QUIT_NOSAVE rune        = 'z'
-	QUIT_SAVE   rune        = 'x'
-	SAVE_NOQUIT termbox.Key = termbox.KeyCtrlS
-
-	TAB_WIDTH    int = 4
-	SCROLLMARGIN int = 5
-
-	RULER_COL int               = 80
-	RULER_BG  termbox.Attribute = termbox.ColorGreen
-
+// Controls
+const (
 	TOGGLE_MODE_KEY termbox.Key = termbox.KeyEsc
+	QUIT_NOSAVE     rune        = 'z'
+	QUIT_SAVE       rune        = 'x'
+	SAVE_NOQUIT     termbox.Key = termbox.KeyCtrlS
+)
 
+// Navigation
+const (
+	CURSOR_LEFT   rune        = 'j'
+	CURSOR_DOWN   rune        = 'k'
+	CURSOR_UP     rune        = 'l'
+	CURSOR_RIGHT  rune        = ';'
+	JUMP_UP       rune        = 'g'
+	JUMP_DOWN     rune        = 'h'
+	PAGE_UP       termbox.Key = termbox.KeyPgup
+	PAGE_DOWN     termbox.Key = termbox.KeyPgdn
+	START_OF_LINE termbox.Key = termbox.KeyHome
+	END_OF_LINE   termbox.Key = termbox.KeyEnd
+)
+
+// Copy-Paste
+const (
 	COPY_SYMBOL_KEY  rune = '1'
 	CUT_SYMBOL_KEY   rune = '2'
 	PASTE_SYMBOL_KEY rune = '3'

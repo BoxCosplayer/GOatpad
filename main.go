@@ -27,6 +27,7 @@ type statusBarState struct {
 	lineCount     int
 	copyActive    bool
 	undoActive    bool
+	jumpActive    bool
 	cols          int
 	rows          int
 }
@@ -63,6 +64,11 @@ var (
 	viewportDirty = true
 
 	statusBar statusBarCache
+
+	jumpPending     bool
+	jumpDirection   int
+	jumpDigitsCount int
+	jumpValue       int
 )
 
 var tabExpansion = func() []rune {
@@ -333,6 +339,7 @@ func display_status_bar() {
 		lineCount:     len(textBuffer),
 		copyActive:    len(copyBuffer.contents[0]) > 0,
 		undoActive:    len(undoStack.contents) > 0,
+		jumpActive:    jumpPending,
 		cols:          COLS,
 		rows:          ROWS,
 	}
@@ -348,6 +355,7 @@ func display_status_bar() {
 		cursorStatus string // location of cursor (line, column)
 		copyStatus   string // whether the copy buffer is active
 		undoStatus   string // whether the undo buffer is active
+		jumpStatus   string // whether a jump command is pending
 	)
 
 	if state.mode == 1 {
@@ -368,28 +376,30 @@ func display_status_bar() {
 	if state.undoActive {
 		undoStatus = " [UNDO]"
 	}
+	if state.jumpActive {
+		jumpStatus = " [JUMP]"
+	}
 
 	cursorStatus = " Line " + strconv.Itoa(state.row+1) + " Col " + strconv.Itoa(state.col+1) + " "
 
 	fileStatus = state.fileExtension + " - " + strconv.Itoa(state.lineCount) + " lines" + fileStatus
 
 	// Logic to clamp filename to the leftover space
-	emptySpace := state.cols - (len(modeStatus) + len(copyStatus) + len(undoStatus) + len(cursorStatus))
+	emptySpace := state.cols - (len(modeStatus) + len(copyStatus) + len(undoStatus) + len(jumpStatus) + len(cursorStatus))
 	filenameLength := len(state.filename)
 	filenameSpace := emptySpace - len(fileStatus) - TAB_WIDTH - 2
 
 	if filenameLength > filenameSpace {
-		filenameLength = filenameSpace
-		fileStatus = state.filename[:filenameLength] + ".." + fileStatus
+		fileStatus = state.filename[:filenameSpace] + ".." + fileStatus
 	} else {
 		fileStatus = state.filename[:filenameLength] + fileStatus
 	}
 
 	// Determine amount of space to create between left side and right side of status bar
-	emptySpace = state.cols - (len(modeStatus) + len(fileStatus) + len(copyStatus) + len(undoStatus) + len(cursorStatus)) - 4
+	emptySpace = state.cols - (len(modeStatus) + len(fileStatus) + len(copyStatus) + len(undoStatus) + len(jumpStatus) + len(cursorStatus)) - 4
 	spaces := strings.Repeat(" ", emptySpace)
 
-	message := modeStatus + fileStatus + copyStatus + undoStatus + spaces + cursorStatus
+	message := modeStatus + fileStatus + copyStatus + undoStatus + jumpStatus + spaces + cursorStatus
 	statusBar.message = message
 	print_message(0, state.rows, termbox.ColorBlack, termbox.ColorWhite, message)
 
