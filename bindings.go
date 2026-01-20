@@ -405,14 +405,16 @@ func handle_jump_digit(ch rune) bool {
 			currentCol = 0
 			currentRow = 0
 			reset_jump_state()
+			return true
 		} else if ch == JUMP_DOWN && jumpDirection == 1 {
 			currentCol = 0
 			currentRow = len(textBuffer) - 1
 			reset_jump_state()
+			return true
 		} else {
+			reset_jump_state()
 			return false
 		}
-		return true
 	}
 
 	jumpValue = jumpValue*10 + int(ch-'0')

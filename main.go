@@ -390,14 +390,13 @@ func display_status_bar() {
 	filenameSpace := emptySpace - len(fileStatus) - TAB_WIDTH - 2
 
 	if filenameLength > filenameSpace {
-		filenameLength = filenameSpace
-		fileStatus = state.filename[:filenameLength] + ".." + fileStatus
+		fileStatus = state.filename[:filenameSpace] + ".." + fileStatus
 	} else {
 		fileStatus = state.filename[:filenameLength] + fileStatus
 	}
 
 	// Determine amount of space to create between left side and right side of status bar
-	emptySpace = state.cols - (len(modeStatus) + len(fileStatus) + len(copyStatus) + len(undoStatus) + len(cursorStatus)) - 4
+	emptySpace = state.cols - (len(modeStatus) + len(fileStatus) + len(copyStatus) + len(undoStatus) + len(jumpStatus) + len(cursorStatus)) - 4
 	spaces := strings.Repeat(" ", emptySpace)
 
 	message := modeStatus + fileStatus + copyStatus + undoStatus + jumpStatus + spaces + cursorStatus
