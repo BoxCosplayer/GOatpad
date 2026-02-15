@@ -3,6 +3,8 @@ A text editor that's goated
 
 <img width="2130" height="1300" alt="image" src="https://github.com/user-attachments/assets/c570dfc1-48ec-4aaf-908b-3748585868e4" />
 
+Language Server: https://github.com/BoxCosplayer/go-language-server
+
 # Features
 
 - Modal editing (View/Edit) with status bar indicators
